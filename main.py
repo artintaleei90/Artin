@@ -1,16 +1,13 @@
 import telebot
-import requests
 from flask import Flask, request
-from fpdf import FPDF
 
 TOKEN = "7739258515:AAEUXIZ3ySZ9xp9W31l7qr__sZkbf6qcKnE"
 bot = telebot.TeleBot(TOKEN)
-
 app = Flask(__name__)
 user_data = {}
 
 @app.route(f'/{TOKEN}', methods=['POST'])
-def getMessage():
+def webhook():
     json_str = request.get_data().decode('UTF-8')
     update = telebot.types.Update.de_json(json_str)
     bot.process_new_updates([update])
@@ -20,37 +17,12 @@ def getMessage():
 def index():
     return "من زنده‌ام سلطان 😎"
 
-# روت مخصوص ساخت PDF
-@app.route('/render', methods=['POST'])
-def render_pdf():
-    data = request.get_json()
-
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", size=12)
-
-    pdf.cell(200, 10, txt="📦 سفارش جدید از ربات تلگرام", ln=True, align='C')
-    pdf.cell(200, 10, txt="-------------------------------", ln=True, align='L')
-
-    pdf.cell(200, 10, txt=f"👤 نام: {data['full_name']}", ln=True)
-    pdf.cell(200, 10, txt=f"🏙 شهر: {data['city']}", ln=True)
-    pdf.cell(200, 10, txt=f"📍 آدرس: {data['address']}", ln=True)
-    pdf.cell(200, 10, txt="🛒 سفارش‌ها:", ln=True)
-
-    for item in data['orders']:
-        pdf.cell(200, 10, txt=f"- کد: {item['code']} / تعداد: {item['count']}", ln=True)
-
-    pdf.output("order.pdf")
-    return open("order.pdf", "rb").read(), 200
-
-# دستور start
 @bot.message_handler(commands=['start'])
 def start(message):
     chat_id = message.chat.id
     user_data[chat_id] = {"orders": [], "step": "code"}
     bot.send_message(chat_id, "به ربات هالستون خوش آمدی 👗🛍\nکد محصول رو وارد کن:")
 
-# مدیریت مراحل سفارش
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
     chat_id = message.chat.id
@@ -58,8 +30,6 @@ def handle_message(message):
 
     if chat_id not in user_data:
         user_data[chat_id] = {"orders": [], "step": "code"}
-        bot.send_message(chat_id, "شروع جدید! لطفاً کد محصول را وارد کن:")
-        return
 
     step = user_data[chat_id]["step"]
 
@@ -84,7 +54,7 @@ def handle_message(message):
             user_data[chat_id]["step"] = "name"
             bot.send_message(chat_id, "نام کاملتو وارد کن:")
         else:
-            bot.send_message(chat_id, "فقط بنویس بله یا خیر.")
+            bot.send_message(chat_id, "لطفاً فقط 'بله' یا 'خیر' بنویس.")
 
     elif step == "name":
         user_data[chat_id]["full_name"] = text
@@ -98,30 +68,32 @@ def handle_message(message):
 
     elif step == "address":
         user_data[chat_id]["address"] = text
+        user_data[chat_id]["step"] = "phone"
+        bot.send_message(chat_id, "شماره همراهتو وارد کن:")
 
-        data = {
-            "full_name": user_data[chat_id]["full_name"],
-            "city": user_data[chat_id]["city"],
-            "address": user_data[chat_id]["address"],
-            "orders": user_data[chat_id]["orders"]
-        }
+    elif step == "phone":
+        user_data[chat_id]["phone"] = text
 
-        try:
-            response = requests.post("https://artin-ehb4.onrender.com/render", json=data)
-            if response.status_code == 200:
-                bot.send_document(chat_id, response.content, visible_file_name="order.pdf")
-                bot.send_message(chat_id, "✅ سفارش ثبت شد. برای نهایی‌کردن با ۰۹۱۲۸۸۸۳۳۴۳ تماس بگیر.")
-            else:
-                bot.send_message(chat_id, "❌ مشکلی در ساخت فایل PDF پیش اومد.")
-        except:
-            bot.send_message(chat_id, "❌ اتصال به سرور برقرار نشد.")
-        
+        # ساخت متن نهایی سفارش
+        text_order = f"📦 سفارش جدید:\n\n"
+        text_order += f"👤 نام کامل: {user_data[chat_id]['full_name']}\n"
+        text_order += f"🏙 شهر: {user_data[chat_id]['city']}\n"
+        text_order += f"📍 آدرس: {user_data[chat_id]['address']}\n"
+        text_order += f"📞 شماره همراه: {user_data[chat_id]['phone']}\n"
+        text_order += f"🛒 سفارش‌ها:\n"
+
+        for o in user_data[chat_id]["orders"]:
+            text_order += f"  - کد: {o['code']} | تعداد: {o['count']}\n"
+
+        bot.send_message(chat_id, "✅ سفارش شما ثبت شد. متشکریم!")
+        # می‌تونی اینجا این متن رو به کانال یا ادمین هم بفرستی:
+        admin_id = 123456789  # شناسه تلگرام خودت رو اینجا بگذار
+        bot.send_message(admin_id, text_order)
+
         user_data.pop(chat_id)
 
-# اجرای Flask سرور
 if __name__ == '__main__':
     import os
-    import telebot.util
     bot.remove_webhook()
-    bot.set_webhook(url=f"https://artin-ehb4.onrender.com/{TOKEN}")
-    app.run(host="0.0.0.0", port=int(os.environ.get('PORT', 8080)))
+    bot.set_webhook(url=f"https://yourdomain.com/{TOKEN}")  # آدرس وب‌هوک واقعی‌ت رو بگذار
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
