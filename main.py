@@ -20,30 +20,18 @@ def download_and_extract_fonts():
                 zip_ref.extractall(FONTS_DIR)
             print("✅ فونت‌ها با موفقیت استخراج شدند.")
         else:
-            print("❌ دانلود فونت‌ها با خطا مواجه شد.")
+            print("❌ دانلود فونت‌ها موفق نبود.")
     else:
-        print("فونت‌ها قبلا دانلود شده‌اند، از دانلود مجدد صرف نظر شد.")
-
-def find_regular_ttf_font_path(startpath):
-    for root, dirs, files in os.walk(startpath):
-        for file in files:
-            if file.lower().endswith('.ttf') and 'regular' in file.lower():
-                return os.path.join(root, file)
-    return None
+        print("✅ پوشه فونت‌ها قبلا وجود داشته، دانلود رد شد.")
 
 download_and_extract_fonts()
 
-FONT_PATH = find_regular_ttf_font_path(FONTS_DIR)
-if not FONT_PATH:
-    print(f"❌ فونت Regular پیدا نشد! مسیر اشتباه است یا استخراج نشده.")
-    exit(1)
-else:
-    print(f"✅ فونت Regular پیدا شد: {FONT_PATH}")
-
 class PDF(FPDF):
     def header(self):
-        self.add_font('Vazir', '', FONT_PATH, uni=True)
-        self.set_font('Vazir', '', 14)
+        # اضافه کردن فونت‌ها با استایل‌های مختلف
+        self.add_font('Vazir', '', f'{FONTS_DIR}/Round-Dots/misc/Non-Latin/fonts/ttf/Vazirmatn-RD-NL-Regular.ttf', uni=True)
+        self.add_font('Vazir', 'B', f'{FONTS_DIR}/Round-Dots/misc/Non-Latin/fonts/ttf/Vazirmatn-RD-NL-Bold.ttf', uni=True)
+        self.set_font('Vazir', 'B', 14)
         self.cell(0, 10, 'فاکتور سفارش', 0, 1, 'C')
         self.ln(5)
 
@@ -91,7 +79,7 @@ keep_alive()
 def start(message):
     chat_id = message.chat.id
     user_data[chat_id] = {'orders': [], 'step': 'code'}
-    bot.send_message(chat_id, '🛍 خوش آمدی به ربات فروشگاه هالستون!\nلینک کانال ما: https://t.me/Halston_shop\nلطفا کد محصول را وارد کن:')
+    bot.send_message(chat_id, '🛍 خوش آمدی به ربات فروشگاه هالستون!\nلینک گروه: https://t.me/Halston_shop\nلطفا کد محصول را وارد کن:')
 
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
