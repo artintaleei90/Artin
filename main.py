@@ -79,7 +79,7 @@ def handle_message(message):
 
         try:
             # سرور PDF (همون Flask رندر تو)
-            response = requests.post("https://artin-ehb4.onrender.com/render", json=data)
+            response = requests.post("https://pdf-artin.onrender.com/render", json=data)
             if response.status_code == 200:
                 bot.send_document(chat_id, response.content, visible_file_name="order.pdf")
                 bot.send_message(chat_id, "✅ سفارش ثبت شد. لطفاً برای شماره ۰۹۱۲۸۸۸۳۳۴۳ ارسال و نهایی کنید.")
