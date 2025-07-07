@@ -7,36 +7,51 @@ from fpdf import FPDF
 from flask import Flask
 from threading import Thread
 
+# لینک فونت
 FONTS_ZIP_URL = 'https://github.com/artintaleei90/Artin/raw/main/vazirmatn-v33.003.zip'
 FONTS_DIR = 'fonts'
+FONT_NAME = 'Vazirmatn-Regular.ttf'
+FONT_FINAL_PATH = os.path.join(FONTS_DIR, FONT_NAME)
 
 def download_and_extract_fonts():
     if not os.path.exists(FONTS_DIR):
-        print("Downloading fonts zip...")
+        os.makedirs(FONTS_DIR)
+
+    if not os.path.exists(FONT_FINAL_PATH):
+        print("📥 Downloading fonts zip...")
         response = requests.get(FONTS_ZIP_URL)
         if response.status_code == 200:
-            print("Extracting fonts...")
             with zipfile.ZipFile(io.BytesIO(response.content)) as zip_ref:
                 zip_ref.extractall(FONTS_DIR)
-            print("Fonts downloaded and extracted.")
+            print("✅ Fonts extracted.")
+
+            for root, dirs, files in os.walk(FONTS_DIR):
+                for file in files:
+                    if file == FONT_NAME:
+                        src_path = os.path.join(root, file)
+                        with open(src_path, 'rb') as src, open(FONT_FINAL_PATH, 'wb') as dst:
+                            dst.write(src.read())
+                        return
+            print("❌ Font file not found in extracted files.")
         else:
-            print("Failed to download fonts zip.")
+            print("❌ Failed to download fonts zip.")
     else:
-        print("Fonts directory already exists, skipping download.")
+        print("✅ Font already exists.")
 
 download_and_extract_fonts()
 
+# کلاس PDF
 class PDF(FPDF):
     def header(self):
-        self.add_font('Vazir', '', f'{FONTS_DIR}/Vazirmatn-Regular.ttf', uni=True)
+        self.add_font('Vazir', '', FONT_FINAL_PATH, uni=True)
         self.set_font('Vazir', '', 14)
-        self.cell(0, 10, 'فاکتور سفارش', 0, 1, 'C')
+        self.cell(0, 10, '🧾 فاکتور سفارش', 0, 1, 'C')
         self.ln(5)
 
     def footer(self):
         self.set_y(-15)
         self.set_font('Vazir', '', 8)
-        self.cell(0, 10, 'مرکز پوشاک هالستون', 0, 0, 'C')
+        self.cell(0, 10, 'مرکز پوشاک هالستون - @Halston_shop', 0, 0, 'C')
 
     def add_customer_info(self, name, phone, city, address):
         self.set_font('Vazir', '', 12)
@@ -55,8 +70,8 @@ class PDF(FPDF):
             self.cell(80, 10, item['code'], 1, 0, 'C')
             self.cell(40, 10, str(item['count']), 1, 1, 'C')
 
+# وب سرور برای Render
 app = Flask('')
-
 @app.route('/')
 def home():
     return "Bot is running..."
@@ -67,26 +82,34 @@ def run():
 def keep_alive():
     Thread(target=run).start()
 
+# توکن ربات
 TOKEN = '7739258515:AAEUXIZ3ySZ9xp9W31l7qr__sZkbf6qcKnE'
 bot = telebot.TeleBot(TOKEN)
 user_data = {}
 
 keep_alive()
 
+# 📦 شروع با /start
 @bot.message_handler(commands=['start'])
 def start(message):
     chat_id = message.chat.id
     user_data[chat_id] = {'orders': [], 'step': 'code'}
-    bot.send_message(chat_id, '🛍 خوش آمدی به ربات فروشگاه هالستون!\nلطفا کد محصول را وارد کن:')
+    bot.send_message(chat_id, '''🛍 به ربات فروشگاه هالستون خوش آمدی!
 
+🧵 می‌تونی همین‌جا سفارش خودتو ثبت کنی و فاکتور PDF بگیری.
+
+📢 برای دیدن محصولات بیشتر عضو کانال ما شو:
+🔗 https://t.me/Halston_shop
+
+🔢 لطفاً کد اولین محصول رو وارد کن:''')
+
+# 📋 پردازش پیام‌ها
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
     chat_id = message.chat.id
     text = message.text.strip()
-
     if chat_id not in user_data:
         user_data[chat_id] = {'orders': [], 'step': 'code'}
-
     step = user_data[chat_id]['step']
 
     if step == 'code':
@@ -102,17 +125,17 @@ def handle_message(message):
         code = user_data[chat_id]['current_code']
         user_data[chat_id]['orders'].append({'code': code, 'count': count})
         user_data[chat_id]['step'] = 'more'
-        bot.send_message(chat_id, 'محصول دیگری داری؟ (بله / خیر)')
+        bot.send_message(chat_id, '➕ محصول دیگری داری؟ (بله / خیر)')
 
     elif step == 'more':
         if text.lower() == 'بله':
             user_data[chat_id]['step'] = 'code'
-            bot.send_message(chat_id, 'کد محصول بعدی را وارد کن:')
+            bot.send_message(chat_id, '🔢 کد محصول بعدی را وارد کن:')
         elif text.lower() == 'خیر':
             user_data[chat_id]['step'] = 'name'
             bot.send_message(chat_id, '📝 لطفا نام کامل خود را وارد کن:')
         else:
-            bot.send_message(chat_id, 'لطفا فقط بله یا خیر بنویس.')
+            bot.send_message(chat_id, '⚠️ لطفا فقط "بله" یا "خیر" بنویس.')
 
     elif step == 'name':
         user_data[chat_id]['name'] = text
@@ -144,10 +167,10 @@ def handle_message(message):
         with open(filename, 'rb') as f:
             bot.send_document(chat_id, f)
 
-        bot.send_message(chat_id, '✅ فاکتور شما ثبت شد. با تشکر از خرید شما!\nکانال ما: https://t.me/Halston_shop')
-
+        bot.send_message(chat_id, '✅ فاکتور شما با موفقیت ثبت و ارسال شد.\n\n📢 کانال فروشگاه:\nhttps://t.me/Halston_shop')
         os.remove(filename)
         user_data.pop(chat_id)
 
-bot.remove_webhook()  # حذف webhook برای جلوگیری از خطای 409
+# رفع ارور 409
+bot.remove_webhook()
 bot.infinity_polling()
