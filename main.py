@@ -3,7 +3,7 @@ import requests
 from keep_alive import keep_alive  # این فایل باید server.py یا app.py Flask باشه
 
 # 🚨 توجه: این توکن فقط برای تسته، در پروژه واقعی داخل .env بذار
-TOKEN = "7266241036:AAFRW-1pMk1syso8kS_mXnoXFtVbsrpFdDY"
+TOKEN = "7739258515:AAEUXIZ3ySZ9xp9W31l7qr__sZkbf6qcKnE"
 bot = telebot.TeleBot(TOKEN)
 
 # فعال‌سازی سرور برای زنده نگه داشتن ربات روی Render
