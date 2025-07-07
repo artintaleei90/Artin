@@ -20,18 +20,19 @@ def download_and_extract_fonts():
                 zip_ref.extractall(FONTS_DIR)
             print("✅ فونت‌ها با موفقیت استخراج شدند.")
         else:
-            print("❌ دانلود فونت‌ها موفق نبود.")
+            print("❌ دانلود فونت‌ها ناموفق بود.")
     else:
-        print("✅ پوشه فونت‌ها قبلا وجود داشته، دانلود رد شد.")
+        print("✅ فونت‌ها قبلاً دانلود و استخراج شده‌اند.")
 
 download_and_extract_fonts()
 
 class PDF(FPDF):
     def header(self):
-        # اضافه کردن فونت‌ها با استایل‌های مختلف
+        # اضافه کردن فونت‌های مختلف با استایل‌ها
         self.add_font('Vazir', '', f'{FONTS_DIR}/Round-Dots/misc/Non-Latin/fonts/ttf/Vazirmatn-RD-NL-Regular.ttf', uni=True)
         self.add_font('Vazir', 'B', f'{FONTS_DIR}/Round-Dots/misc/Non-Latin/fonts/ttf/Vazirmatn-RD-NL-Bold.ttf', uni=True)
-        self.set_font('Vazir', 'B', 14)
+        # استفاده از فونت عادی برای هدر
+        self.set_font('Vazir', '', 14)
         self.cell(0, 10, 'فاکتور سفارش', 0, 1, 'C')
         self.ln(5)
 
@@ -49,10 +50,10 @@ class PDF(FPDF):
         self.ln(5)
 
     def add_order_table(self, orders):
-        self.set_font('Vazir', 'B', 12)
+        self.set_font('Vazir', 'B', 12)  # اینجا بولد استفاده شده
         self.cell(80, 10, 'کد محصول', 1, 0, 'C')
         self.cell(40, 10, 'تعداد', 1, 1, 'C')
-        self.set_font('Vazir', '', 12)
+        self.set_font('Vazir', '', 12)  # اینجا معمولی
         for item in orders:
             self.cell(80, 10, item['code'], 1, 0, 'C')
             self.cell(40, 10, str(item['count']), 1, 1, 'C')
@@ -69,7 +70,7 @@ def run():
 def keep_alive():
     Thread(target=run).start()
 
-TOKEN = '7739258515:AAEUXIZ3ySZ9xp9W31l7qr__sZkbf6qcKnE'
+TOKEN = 'توکن_ربات_تو_اینجا_بزار'  # حتما توکن واقعی رو جایگزین کن
 bot = telebot.TeleBot(TOKEN)
 user_data = {}
 
@@ -79,7 +80,7 @@ keep_alive()
 def start(message):
     chat_id = message.chat.id
     user_data[chat_id] = {'orders': [], 'step': 'code'}
-    bot.send_message(chat_id, '🛍 خوش آمدی به ربات فروشگاه هالستون!\nلینک گروه: https://t.me/Halston_shop\nلطفا کد محصول را وارد کن:')
+    bot.send_message(chat_id, '🛍 خوش آمدی به ربات فروشگاه هالستون!\nلینک گروه ما:\nhttps://t.me/Halston_shop\n\nلطفا کد محصول را وارد کن:')
 
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
