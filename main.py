@@ -70,7 +70,7 @@ def run():
 def keep_alive():
     Thread(target=run).start()
 
-TOKEN = 'توکن_ربات_تو_اینجا_بزار'  # حتما توکن واقعی رو جایگزین کن
+TOKEN = '7739258515:AAEUXIZ3ySZ9xp9W31l7qr__sZkbf6qcKnE'
 bot = telebot.TeleBot(TOKEN)
 user_data = {}
 
