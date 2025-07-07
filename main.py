@@ -1,66 +1,62 @@
-import requests
-import zipfile
-import io
 import os
-import telebot
+import requests
 from fpdf import FPDF
+import telebot
 from flask import Flask
 from threading import Thread
 
-# لینک مستقیم فایل زیپ فونت وزیر توی گیت‌هاب (Raw لینک فایل زیپ فونت)
-FONTS_ZIP_URL = 'https://github.com/artintaleei90/Artin/raw/main/vazirmatn-v33.003.zip'
-
-# مسیر پوشه فونت‌ها
+# مسیر فونت و لینک دانلود مستقیم فونت
 FONTS_DIR = 'fonts'
+FONT_PATH = f'{FONTS_DIR}/Vazirmatn-Regular.ttf'
+FONT_URL = 'https://github.com/artintaleei90/Artin/raw/main/Vazirmatn-Regular.ttf'
 
-def download_and_extract_fonts():
+# دانلود فونت اگر وجود نداشت
+def download_font():
     if not os.path.exists(FONTS_DIR):
-        print("Downloading fonts zip...")
-        response = requests.get(FONTS_ZIP_URL)
-        if response.status_code == 200:
-            print("Extracting fonts...")
-            with zipfile.ZipFile(io.BytesIO(response.content)) as zip_ref:
-                zip_ref.extractall(FONTS_DIR)
-            print("Fonts downloaded and extracted.")
+        os.makedirs(FONTS_DIR)
+    if not os.path.exists(FONT_PATH):
+        print("📥 در حال دانلود فونت...")
+        r = requests.get(FONT_URL)
+        if r.status_code == 200:
+            with open(FONT_PATH, 'wb') as f:
+                f.write(r.content)
+            print("✅ فونت دانلود شد.")
         else:
-            print("Failed to download fonts zip.")
-    else:
-        print("Fonts directory already exists, skipping download.")
+            print("❌ خطا در دانلود فونت.")
 
-# دانلود و استخراج فونت‌ها
-download_and_extract_fonts()
+download_font()
 
-# کلاس PDF با فونت وزیر
+# کلاس PDF
 class PDF(FPDF):
     def header(self):
-        self.add_font('Vazir', '', f'{FONTS_DIR}/Vazirmatn-Regular.ttf', uni=True)
-        self.set_font('Vazir', '', 14)
-        self.cell(0, 10, 'فاکتور سفارش', 0, 1, 'C')
+        self.add_font('Vazir', '', FONT_PATH, uni=True)
+        self.set_font('Vazir', '', 16)
+        self.cell(0, 10, '🧾 فاکتور سفارش', 0, 1, 'C')
         self.ln(5)
 
     def footer(self):
         self.set_y(-15)
-        self.set_font('Vazir', '', 8)
-        self.cell(0, 10, 'مرکز پوشاک هالستون', 0, 0, 'C')
+        self.set_font('Vazir', '', 10)
+        self.cell(0, 10, 'کانال ما: @Halston_shop', 0, 0, 'C')
 
     def add_customer_info(self, name, phone, city, address):
         self.set_font('Vazir', '', 12)
-        self.cell(0, 10, f'نام مشتری: {name}', 0, 1, 'R')
-        self.cell(0, 10, f'شماره تماس: {phone}', 0, 1, 'R')
-        self.cell(0, 10, f'شهر: {city}', 0, 1, 'R')
-        self.multi_cell(0, 10, f'آدرس: {address}', 0, 1, 'R')
+        self.cell(0, 10, f'👤 نام مشتری: {name}', 0, 1, 'R')
+        self.cell(0, 10, f'📱 شماره تماس: {phone}', 0, 1, 'R')
+        self.cell(0, 10, f'🏙 شهر: {city}', 0, 1, 'R')
+        self.multi_cell(0, 10, f'📍 آدرس: {address}', 0, 1, 'R')
         self.ln(5)
 
     def add_order_table(self, orders):
         self.set_font('Vazir', 'B', 12)
-        self.cell(80, 10, 'کد محصول', 1, 0, 'C')
-        self.cell(40, 10, 'تعداد', 1, 1, 'C')
+        self.cell(80, 10, '🔢 کد محصول', 1, 0, 'C')
+        self.cell(40, 10, '📦 تعداد', 1, 1, 'C')
         self.set_font('Vazir', '', 12)
         for item in orders:
             self.cell(80, 10, item['code'], 1, 0, 'C')
             self.cell(40, 10, str(item['count']), 1, 1, 'C')
 
-# Flask برای زنده نگه داشتن روی Render
+# Flask برای فعال نگه‌داشتن روی Render
 app = Flask('')
 @app.route('/')
 def home():
@@ -72,20 +68,21 @@ def run():
 def keep_alive():
     Thread(target=run).start()
 
-# توکن ربات (توکن خود سلطان)
-TOKEN = '7739258515:AAEUXIZ3ySZ9xp9W31l7qr__sZkbf6qcKnE'
-bot = telebot.TeleBot(TOKEN)
-
-user_data = {}
-
 keep_alive()
 
+# ✅ توکن ربات (حتماً توکن واقعی خودتو بذار سلطان!)
+TOKEN = '7739258515:AAEUXIZ3ySZ9xp9W31l7qr__sZkbf6qcKnE'
+bot = telebot.TeleBot(TOKEN)
+user_data = {}
+
+# شروع ربات
 @bot.message_handler(commands=['start'])
 def start(message):
     chat_id = message.chat.id
     user_data[chat_id] = {'orders': [], 'step': 'code'}
-    bot.send_message(chat_id, '🛍 خوش آمدی به ربات فروشگاه هالستون!\nلطفا کد محصول را وارد کن:')
+    bot.send_message(chat_id, '🛍 خوش آمدی به فروشگاه هالستون!\nلطفا کد محصول را وارد کن:')
 
+# پیام‌های کاربر
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
     chat_id = message.chat.id
@@ -151,9 +148,7 @@ def handle_message(message):
         with open(filename, 'rb') as f:
             bot.send_document(chat_id, f)
 
-        bot.send_message(chat_id, '✅ فاکتور شما ثبت شد. با تشکر از خرید شما!')
-        bot.send_message(chat_id, '📢 برای اطلاع از جدیدترین محصولات، به کانال ما بپیوندید:\nhttps://t.me/Halston_shop')
-
+        bot.send_message(chat_id, '✅ فاکتور شما ثبت شد.\n🛍 برای دیدن محصولات بیشتر به کانال ما بیا:\n👉 https://t.me/Halston_shop')
         os.remove(filename)
         user_data.pop(chat_id)
 
