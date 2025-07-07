@@ -2,7 +2,7 @@ import telebot
 from keep_alive import keep_alive
 
 # توکن ربات
-TOKEN = "8134014873:AAGGfPvYLrSUyFWsRP0xXS_CRMS97BsO7f4"
+TOKEN = "8038030992:AAEy_NsKyCOmPy7wMtB2BduNB2MdDgoAzPo"
 bot = telebot.TeleBot(TOKEN)
 
 # فعال‌سازی سرور برای آنلاین موندن
