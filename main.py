@@ -7,15 +7,14 @@ from fpdf import FPDF
 from flask import Flask
 from threading import Thread
 
-# آدرس فایل زیپ فونت
+# لینک فایل زیپ فونت
 FONTS_ZIP_URL = 'https://github.com/artintaleei90/Artin/raw/main/vazirmatn-v33.003.zip'
 FONTS_DIR = 'fonts'
-
-# مسیر دقیق فونت ttf
-FONT_PATH = os.path.join(FONTS_DIR, 'vazirmatn-v33.003', 'fonts', 'ttf', 'Vazirmatn-Regular.ttf')
+# مسیر دقیق فونت داخل پوشه استخراج شده
+FONT_PATH = 'fonts/vazirmatn-v33.003/fonts/ttf/Vazirmatn-Regular.ttf'
 
 def download_and_extract_fonts():
-    if not os.path.exists(FONT_PATH):
+    if not os.path.exists(FONTS_DIR):
         print("📦 در حال دانلود فونت‌ها...")
         response = requests.get(FONTS_ZIP_URL)
         if response.status_code == 200:
@@ -24,31 +23,35 @@ def download_and_extract_fonts():
                 zip_ref.extractall(FONTS_DIR)
             print("✅ فونت‌ها با موفقیت استخراج شدند.")
         else:
-            print("❌ دانلود فونت با خطا مواجه شد.")
+            print("❌ دانلود فونت‌ها شکست خورد.")
     else:
-        print("🎯 فونت قبلاً دانلود شده.")
+        print("فونت‌ها قبلا دانلود شده‌اند، دانلود دوباره انجام نمی‌شود.")
+
+    if os.path.exists(FONT_PATH):
+        print(f"✅ فونت پیدا شد در مسیر: {FONT_PATH}")
+    else:
+        print(f"❌ فونت پیدا نشد! مسیر اشتباهه یا استخراج نشده: {FONT_PATH}")
 
 download_and_extract_fonts()
 
-# کلاس فاکتور PDF
 class PDF(FPDF):
     def header(self):
         self.add_font('Vazir', '', FONT_PATH, uni=True)
         self.set_font('Vazir', '', 14)
-        self.cell(0, 10, '🧾 فاکتور سفارش', 0, 1, 'C')
+        self.cell(0, 10, 'فاکتور سفارش', 0, 1, 'C')
         self.ln(5)
 
     def footer(self):
         self.set_y(-15)
         self.set_font('Vazir', '', 8)
-        self.cell(0, 10, '🛍 مرکز پوشاک هالستون', 0, 0, 'C')
+        self.cell(0, 10, 'مرکز پوشاک هالستون', 0, 0, 'C')
 
     def add_customer_info(self, name, phone, city, address):
         self.set_font('Vazir', '', 12)
-        self.cell(0, 10, f'👤 نام مشتری: {name}', 0, 1, 'R')
-        self.cell(0, 10, f'📞 شماره تماس: {phone}', 0, 1, 'R')
-        self.cell(0, 10, f'🏙 شهر: {city}', 0, 1, 'R')
-        self.multi_cell(0, 10, f'📍 آدرس: {address}', 0, 1, 'R')
+        self.cell(0, 10, f'نام مشتری: {name}', 0, 1, 'R')
+        self.cell(0, 10, f'شماره تماس: {phone}', 0, 1, 'R')
+        self.cell(0, 10, f'شهر: {city}', 0, 1, 'R')
+        self.multi_cell(0, 10, f'آدرس: {address}', 0, 1, 'R')
         self.ln(5)
 
     def add_order_table(self, orders):
@@ -60,11 +63,11 @@ class PDF(FPDF):
             self.cell(80, 10, item['code'], 1, 0, 'C')
             self.cell(40, 10, str(item['count']), 1, 1, 'C')
 
-# برای زنده نگه داشتن در هاست
 app = Flask('')
+
 @app.route('/')
 def home():
-    return "✅ Bot is running..."
+    return "ربات فروشگاه هالستون فعال است..."
 
 def run():
     app.run(host='0.0.0.0', port=8080)
@@ -72,7 +75,6 @@ def run():
 def keep_alive():
     Thread(target=run).start()
 
-# توکن ربات (توکن معتبر خودت رو اینجا جایگزین کن)
 TOKEN = '7739258515:AAEUXIZ3ySZ9xp9W31l7qr__sZkbf6qcKnE'
 bot = telebot.TeleBot(TOKEN)
 user_data = {}
@@ -83,13 +85,7 @@ keep_alive()
 def start(message):
     chat_id = message.chat.id
     user_data[chat_id] = {'orders': [], 'step': 'code'}
-    welcome_msg = (
-        '👋 خوش آمدی به ربات فروشگاه **هالستون**\n'
-        'برای ثبت سفارش، کد محصول را وارد کن.\n\n'
-        '📣 کانال ما: https://t.me/Halston_shop\n'
-        '👥 گروه ما: https://t.me/+zWf1KkhnpjM4MTc0'
-    )
-    bot.send_message(chat_id, welcome_msg, parse_mode='Markdown')
+    bot.send_message(chat_id, '🛍 خوش آمدی به ربات فروشگاه هالستون!\nلطفا کد محصول را وارد کن:')
 
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
@@ -156,10 +152,10 @@ def handle_message(message):
         with open(filename, 'rb') as f:
             bot.send_document(chat_id, f)
 
-        bot.send_message(chat_id, '✅ فاکتور شما ثبت شد. با تشکر از خرید شما!\n📣 @Halston_shop')
+        bot.send_message(chat_id, '✅ فاکتور شما ثبت شد. با تشکر از خرید شما!\n\nکانال ما:\nhttps://t.me/Halston_shop')
 
         os.remove(filename)
         user_data.pop(chat_id)
 
-bot.remove_webhook()  # برای جلوگیری از خطای 409
+bot.remove_webhook()  # حذف webhook برای جلوگیری از خطای 409
 bot.infinity_polling()
