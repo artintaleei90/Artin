@@ -1,12 +1,9 @@
 import telebot
 import requests
-from keep_alive import keep_alive  # فایل keep_alive.py برای زنده نگه داشتن سرور Flask
+from keep_alive import keep_alive  # حواست باشه این فایل هم باشه
 
-TOKEN = "7266241036:AAFRW-1pMk1syso8kS_mXnoXFtVbsrpFdDY"
+TOKEN = "7739258515:AAEUXIZ3ySZ9xp9W31l7qr__sZkbf6qcKnE"
 bot = telebot.TeleBot(TOKEN)
-
-CHANNEL_LINK = "https://t.me/Halston_shop"
-GROUP_LINK = "https://t.me/Halston_shop"
 
 keep_alive()
 
@@ -19,12 +16,7 @@ def start(message):
         "orders": [],
         "step": "code"
     }
-    welcome_msg = f"""به ربات هالستون خوش آمدید 👗🛍
-کانال ما: {CHANNEL_LINK}
-گروه پشتیبانی: {GROUP_LINK}
-
-لطفاً کد محصول را وارد کن:"""
-    bot.send_message(chat_id, welcome_msg)
+    bot.send_message(chat_id, "به ربات فروشگاه 👗 **هالستون** خوش اومدی!\n\n📢 گروه ما: https://t.me/Halston_shop\n\nلطفاً کد محصول رو وارد کن:")
 
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
@@ -33,7 +25,7 @@ def handle_message(message):
 
     if chat_id not in user_data:
         user_data[chat_id] = {"orders": [], "step": "code"}
-        bot.send_message(chat_id, "شروع جدید! لطفاً کد محصول را وارد کن:")
+        bot.send_message(chat_id, "شروع جدید! لطفاً کد محصول رو وارد کن:")
         return
 
     step = user_data[chat_id]["step"]
@@ -41,17 +33,17 @@ def handle_message(message):
     if step == "code":
         user_data[chat_id]["current_code"] = text
         user_data[chat_id]["step"] = "count"
-        bot.send_message(chat_id, "تعداد محصول رو وارد کن:")
+        bot.send_message(chat_id, "✅ تعداد این محصول رو وارد کن:")
 
     elif step == "count":
         if not text.isdigit():
-            bot.send_message(chat_id, "لطفاً فقط عدد وارد کن.")
+            bot.send_message(chat_id, "❗️ لطفاً فقط عدد وارد کن.")
             return
         count = int(text)
         code = user_data[chat_id]["current_code"]
         user_data[chat_id]["orders"].append({"code": code, "count": count})
         user_data[chat_id]["step"] = "more"
-        bot.send_message(chat_id, "سفارش دیگه‌ای داری؟ (بله / خیر)")
+        bot.send_message(chat_id, "📦 سفارش دیگه‌ای داری؟ (بله / خیر)")
 
     elif step == "more":
         if text.lower() == "بله":
@@ -59,53 +51,53 @@ def handle_message(message):
             bot.send_message(chat_id, "کد محصول بعدی رو وارد کن:")
         elif text.lower() == "خیر":
             user_data[chat_id]["step"] = "name"
-            bot.send_message(chat_id, "نام کامل خودتو وارد کن:")
+            bot.send_message(chat_id, "📝 لطفاً نام کاملت رو وارد کن:")
         else:
             bot.send_message(chat_id, "فقط 'بله' یا 'خیر' بنویس لطفاً.")
 
     elif step == "name":
         user_data[chat_id]["full_name"] = text
+        user_data[chat_id]["step"] = "phone"
+        bot.send_message(chat_id, "📱 شماره تماس خودت رو وارد کن:")
+
+    elif step == "phone":
+        user_data[chat_id]["phone"] = text
         user_data[chat_id]["step"] = "city"
-        bot.send_message(chat_id, "نام شهرت رو وارد کن:")
+        bot.send_message(chat_id, "🏙 لطفاً نام شهرت رو وارد کن:")
 
     elif step == "city":
         user_data[chat_id]["city"] = text
         user_data[chat_id]["step"] = "address"
-        bot.send_message(chat_id, "آدرس دقیق رو وارد کن:")
+        bot.send_message(chat_id, "📍 آدرس دقیق رو وارد کن:")
 
     elif step == "address":
         user_data[chat_id]["address"] = text
-        user_data[chat_id]["step"] = "phone"
-        bot.send_message(chat_id, "شماره تماس همراهت رو وارد کن:")
-
-    elif step == "phone":
-        # چک کردن شماره تماس ساده
-        if not (text.isdigit() and (8 <= len(text) <= 15)):
-            bot.send_message(chat_id, "لطفاً شماره تماس معتبر وارد کن (فقط اعداد، ۸ تا ۱۵ رقم).")
-            return
-        user_data[chat_id]["phone"] = text
         user_data[chat_id]["step"] = "done"
 
-        data = {
-            "full_name": user_data[chat_id]["full_name"],
-            "city": user_data[chat_id]["city"],
-            "address": user_data[chat_id]["address"],
-            "phone": user_data[chat_id]["phone"],
-            "orders": user_data[chat_id]["orders"]
-        }
+        # ساخت محتوای فایل متنی
+        orders = user_data[chat_id]["orders"]
+        text_file = f"سفارش مشتری: {user_data[chat_id]['full_name']}\n"
+        text_file += f"شماره تماس: {user_data[chat_id]['phone']}\n"
+        text_file += f"شهر: {user_data[chat_id]['city']}\n"
+        text_file += f"آدرس: {user_data[chat_id]['address']}\n\n"
+        text_file += "📦 محصولات سفارش داده شده:\n"
 
-        try:
-            response = requests.post("https://artin-ehb4.onrender.com/render", json=data)
-            if response.status_code == 200:
-                bot.send_document(chat_id, response.content, visible_file_name="order.pdf")
-                bot.send_message(chat_id, "✅ سفارش ثبت شد. لطفاً برای نهایی کردن با شماره ۰۹۱۲۸۸۸۳۳۴۳ تماس بگیر.")
-            else:
-                bot.send_message(chat_id, "❌ مشکلی در ساخت PDF پیش آمد.")
-        except Exception as e:
-            print(e)
-            bot.send_message(chat_id, "❌ اتصال به سرور PDF برقرار نشد.")
+        for order in orders:
+            text_file += f"- کد: {order['code']} | تعداد: {order['count']}\n"
+
+        # ذخیره در فایل
+        file_name = f"order_{chat_id}.txt"
+        with open(file_name, "w", encoding='utf-8') as f:
+            f.write(text_file)
+
+        # ارسال فایل به کاربر
+        with open(file_name, "rb") as f:
+            bot.send_document(chat_id, f, visible_file_name="safareshe_shoma.txt")
+
+        bot.send_message(chat_id, "✅ سفارش ثبت شد. فایل بالا رو برای نهایی کردن ارسال کن به ۰۹۱۲۸۸۸۳۳۴۳")
 
         user_data.pop(chat_id)
 
-print("✅ ربات روشن شد و آماده‌ست سلطان!")
+# شروع ربات
+print("✅ ربات آماده‌ست سلطان!")
 bot.infinity_polling()
