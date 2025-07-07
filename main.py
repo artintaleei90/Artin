@@ -22,37 +22,23 @@ def download_and_extract_fonts():
         else:
             print("❌ دانلود فونت‌ها با خطا مواجه شد.")
     else:
-        print("✅ پوشه فونت‌ها از قبل وجود دارد، دانلود و استخراج رد شد.")
+        print("فونت‌ها قبلا دانلود شده‌اند، از دانلود مجدد صرف نظر شد.")
 
-def list_files(startpath):
-    print(f"ساختار فایل‌ها در {startpath}:")
-    for root, dirs, files in os.walk(startpath):
-        level = root.replace(startpath, '').count(os.sep)
-        indent = ' ' * 4 * level
-        print(f'{indent}{os.path.basename(root)}/')
-        subindent = ' ' * 4 * (level + 1)
-        for f in files:
-            print(f'{subindent}{f}')
-
-def find_ttf_font_path(startpath):
+def find_regular_ttf_font_path(startpath):
     for root, dirs, files in os.walk(startpath):
         for file in files:
-            if file.lower().endswith('.ttf'):
+            if file.lower().endswith('.ttf') and 'regular' in file.lower():
                 return os.path.join(root, file)
     return None
 
-# دانلود و استخراج فونت
 download_and_extract_fonts()
 
-# نمایش ساختار فونت‌ها
-list_files(FONTS_DIR)
-
-FONT_PATH = find_ttf_font_path(FONTS_DIR)
+FONT_PATH = find_regular_ttf_font_path(FONTS_DIR)
 if not FONT_PATH:
-    print(f"❌ فونت پیدا نشد! مسیر اشتباهه یا استخراج نشده: {FONTS_DIR}")
+    print(f"❌ فونت Regular پیدا نشد! مسیر اشتباه است یا استخراج نشده.")
     exit(1)
 else:
-    print(f"✅ فونت پیدا شد: {FONT_PATH}")
+    print(f"✅ فونت Regular پیدا شد: {FONT_PATH}")
 
 class PDF(FPDF):
     def header(self):
@@ -87,7 +73,7 @@ app = Flask('')
 
 @app.route('/')
 def home():
-    return "ربات فروشگاه هالستون در حال اجراست..."
+    return "Bot is running..."
 
 def run():
     app.run(host='0.0.0.0', port=8080)
@@ -105,12 +91,7 @@ keep_alive()
 def start(message):
     chat_id = message.chat.id
     user_data[chat_id] = {'orders': [], 'step': 'code'}
-    bot.send_message(chat_id,
-        '🛍 خوش آمدی به ربات فروشگاه هالستون!\n'
-        'لطفا کد محصول را وارد کن:\n\n'
-        'برای اطلاعات بیشتر و محصولات بیشتر به کانال ما بپیوندید:\n'
-        'https://t.me/Halston_shop'
-    )
+    bot.send_message(chat_id, '🛍 خوش آمدی به ربات فروشگاه هالستون!\nلینک کانال ما: https://t.me/Halston_shop\nلطفا کد محصول را وارد کن:')
 
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
