@@ -7,11 +7,8 @@ from fpdf import FPDF
 from flask import Flask
 from threading import Thread
 
-# لینک فایل زیپ فونت
 FONTS_ZIP_URL = 'https://github.com/artintaleei90/Artin/raw/main/vazirmatn-v33.003.zip'
 FONTS_DIR = 'fonts'
-# مسیر دقیق فونت داخل پوشه استخراج شده
-FONT_PATH = 'fonts/vazirmatn-v33.003/fonts/ttf/Vazirmatn-Regular.ttf'
 
 def download_and_extract_fonts():
     if not os.path.exists(FONTS_DIR):
@@ -23,16 +20,39 @@ def download_and_extract_fonts():
                 zip_ref.extractall(FONTS_DIR)
             print("✅ فونت‌ها با موفقیت استخراج شدند.")
         else:
-            print("❌ دانلود فونت‌ها شکست خورد.")
+            print("❌ دانلود فونت‌ها با خطا مواجه شد.")
     else:
-        print("فونت‌ها قبلا دانلود شده‌اند، دانلود دوباره انجام نمی‌شود.")
+        print("✅ پوشه فونت‌ها از قبل وجود دارد، دانلود و استخراج رد شد.")
 
-    if os.path.exists(FONT_PATH):
-        print(f"✅ فونت پیدا شد در مسیر: {FONT_PATH}")
-    else:
-        print(f"❌ فونت پیدا نشد! مسیر اشتباهه یا استخراج نشده: {FONT_PATH}")
+def list_files(startpath):
+    print(f"ساختار فایل‌ها در {startpath}:")
+    for root, dirs, files in os.walk(startpath):
+        level = root.replace(startpath, '').count(os.sep)
+        indent = ' ' * 4 * level
+        print(f'{indent}{os.path.basename(root)}/')
+        subindent = ' ' * 4 * (level + 1)
+        for f in files:
+            print(f'{subindent}{f}')
 
+def find_ttf_font_path(startpath):
+    for root, dirs, files in os.walk(startpath):
+        for file in files:
+            if file.lower().endswith('.ttf'):
+                return os.path.join(root, file)
+    return None
+
+# دانلود و استخراج فونت
 download_and_extract_fonts()
+
+# نمایش ساختار فونت‌ها
+list_files(FONTS_DIR)
+
+FONT_PATH = find_ttf_font_path(FONTS_DIR)
+if not FONT_PATH:
+    print(f"❌ فونت پیدا نشد! مسیر اشتباهه یا استخراج نشده: {FONTS_DIR}")
+    exit(1)
+else:
+    print(f"✅ فونت پیدا شد: {FONT_PATH}")
 
 class PDF(FPDF):
     def header(self):
@@ -67,7 +87,7 @@ app = Flask('')
 
 @app.route('/')
 def home():
-    return "ربات فروشگاه هالستون فعال است..."
+    return "ربات فروشگاه هالستون در حال اجراست..."
 
 def run():
     app.run(host='0.0.0.0', port=8080)
@@ -85,7 +105,12 @@ keep_alive()
 def start(message):
     chat_id = message.chat.id
     user_data[chat_id] = {'orders': [], 'step': 'code'}
-    bot.send_message(chat_id, '🛍 خوش آمدی به ربات فروشگاه هالستون!\nلطفا کد محصول را وارد کن:')
+    bot.send_message(chat_id,
+        '🛍 خوش آمدی به ربات فروشگاه هالستون!\n'
+        'لطفا کد محصول را وارد کن:\n\n'
+        'برای اطلاعات بیشتر و محصولات بیشتر به کانال ما بپیوندید:\n'
+        'https://t.me/Halston_shop'
+    )
 
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
@@ -152,7 +177,7 @@ def handle_message(message):
         with open(filename, 'rb') as f:
             bot.send_document(chat_id, f)
 
-        bot.send_message(chat_id, '✅ فاکتور شما ثبت شد. با تشکر از خرید شما!\n\nکانال ما:\nhttps://t.me/Halston_shop')
+        bot.send_message(chat_id, '✅ فاکتور شما ثبت شد. با تشکر از خرید شما!\nکانال ما: https://t.me/Halston_shop')
 
         os.remove(filename)
         user_data.pop(chat_id)
