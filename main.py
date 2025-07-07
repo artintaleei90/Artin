@@ -3,7 +3,7 @@ import requests
 from keep_alive import keep_alive
 
 # 🚨 توجه: توکن تو نباید جایی پخش بشه — اینجا فقط برای تست گذاشتیم
-TOKEN = "8038030992:AAEy_NsKyCOmPy7wMtB2BduNB2MdDgoAzPo"
+TOKEN = "7266241036:AAFRW-1pMk1syso8kS_mXnoXFtVbsrpFdDY"
 bot = telebot.TeleBot(TOKEN)
 
 keep_alive()
