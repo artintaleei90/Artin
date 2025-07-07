@@ -69,7 +69,7 @@ class PDF(FPDF):
 
 # --- بخش ربات تلگرام ---
 
-TOKEN = 'توکن-ربات-تو-اینجا-بذار'  # حتما توکن خودت رو اینجا جایگزین کن
+TOKEN = '7739258515:AAEUXIZ3ySZ9xp9W31l7qr__sZkbf6qcKnE'
 
 bot = telebot.TeleBot(TOKEN)
 user_data = {}
