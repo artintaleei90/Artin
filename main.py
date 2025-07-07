@@ -1,5 +1,6 @@
-import telebot
+
 import requests
+import telebot
 from keep_alive import keep_alive  # حواست باشه این فایل هم باشه
 
 TOKEN = "7739258515:AAEUXIZ3ySZ9xp9W31l7qr__sZkbf6qcKnE"
@@ -8,6 +9,10 @@ bot = telebot.TeleBot(TOKEN)
 keep_alive()
 
 user_data = {}
+
+def rtl_line(text, width=60):
+    # راست چین کردن متن با فاصله گذاری از چپ
+    return text.rjust(width)
 
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -74,23 +79,21 @@ def handle_message(message):
         user_data[chat_id]["address"] = text
         user_data[chat_id]["step"] = "done"
 
-        # ساخت محتوای فایل متنی
         orders = user_data[chat_id]["orders"]
-        text_file = f"سفارش مشتری: {user_data[chat_id]['full_name']}\n"
-        text_file += f"شماره تماس: {user_data[chat_id]['phone']}\n"
-        text_file += f"شهر: {user_data[chat_id]['city']}\n"
-        text_file += f"آدرس: {user_data[chat_id]['address']}\n\n"
-        text_file += "📦 محصولات سفارش داده شده:\n"
+        text_file = ""
+        text_file += rtl_line(f"سفارش مشتری: {user_data[chat_id]['full_name']}\n")
+        text_file += rtl_line(f"شماره تماس: {user_data[chat_id]['phone']}\n")
+        text_file += rtl_line(f"شهر: {user_data[chat_id]['city']}\n")
+        text_file += rtl_line(f"آدرس: {user_data[chat_id]['address']}\n\n")
+        text_file += rtl_line("📦 محصولات سفارش داده شده:\n")
 
         for order in orders:
-            text_file += f"- کد: {order['code']} | تعداد: {order['count']}\n"
+            text_file += rtl_line(f"- کد: {order['code']} | تعداد: {order['count']}\n")
 
-        # ذخیره در فایل
         file_name = f"order_{chat_id}.txt"
         with open(file_name, "w", encoding='utf-8') as f:
             f.write(text_file)
 
-        # ارسال فایل به کاربر
         with open(file_name, "rb") as f:
             bot.send_document(chat_id, f, visible_file_name="safareshe_shoma.txt")
 
@@ -98,6 +101,5 @@ def handle_message(message):
 
         user_data.pop(chat_id)
 
-# شروع ربات
 print("✅ ربات آماده‌ست سلطان!")
 bot.infinity_polling()
