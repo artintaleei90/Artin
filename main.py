@@ -7,24 +7,22 @@ from fpdf import FPDF
 from flask import Flask
 from threading import Thread
 
-# لینک فایل زیپ فونت وزیر (از گیت‌هاب خودت)
 FONTS_ZIP_URL = 'https://github.com/artintaleei90/Artin/raw/main/vazirmatn-v33.003.zip'
-
 FONTS_DIR = 'fonts'
 
 def download_and_extract_fonts():
     if not os.path.exists(FONTS_DIR):
-        print("دانلود فونت...")
+        print("Downloading fonts zip...")
         response = requests.get(FONTS_ZIP_URL)
         if response.status_code == 200:
-            print("استخراج فونت...")
+            print("Extracting fonts...")
             with zipfile.ZipFile(io.BytesIO(response.content)) as zip_ref:
                 zip_ref.extractall(FONTS_DIR)
-            print("فونت دانلود و استخراج شد.")
+            print("Fonts downloaded and extracted.")
         else:
-            print("دانلود فونت موفق نبود!")
+            print("Failed to download fonts zip.")
     else:
-        print("فونت قبلاً دانلود شده، رد می‌شه.")
+        print("Fonts directory already exists, skipping download.")
 
 download_and_extract_fonts()
 
@@ -61,7 +59,7 @@ app = Flask('')
 
 @app.route('/')
 def home():
-    return "ربات هالستون داره کار می‌کنه..."
+    return "Bot is running..."
 
 def run():
     app.run(host='0.0.0.0', port=8080)
@@ -69,10 +67,8 @@ def run():
 def keep_alive():
     Thread(target=run).start()
 
-# توکن ربات (توکن خودت رو جایگزین کن سلطان)
 TOKEN = '7739258515:AAEUXIZ3ySZ9xp9W31l7qr__sZkbf6qcKnE'
 bot = telebot.TeleBot(TOKEN)
-
 user_data = {}
 
 keep_alive()
@@ -153,4 +149,5 @@ def handle_message(message):
         os.remove(filename)
         user_data.pop(chat_id)
 
+bot.remove_webhook()  # حذف webhook برای جلوگیری از خطای 409
 bot.infinity_polling()
