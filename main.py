@@ -1,5 +1,5 @@
 import telebot
-from keep_alive import keep_alive  # اگر فایل keep_alive داری
+from keep_alive import keep_alive  # اگر داری
 
 TOKEN = "7739258515:AAEUXIZ3ySZ9xp9W31l7qr__sZkbf6qcKnE"
 bot = telebot.TeleBot(TOKEN)
@@ -9,7 +9,6 @@ keep_alive()
 user_data = {}
 
 def make_rtl(text):
-    # اضافه کردن کاراکتر راست چین برای نمایش بهتر متن فارسی
     RTL_MARK = '\u200F'
     lines = text.split('\n')
     rtl_lines = [RTL_MARK + line for line in lines]
@@ -54,6 +53,7 @@ def handle_message(message):
             return
         count = int(text)
         code = user_data[chat_id]["current_code"]
+        # اینجا اضافه می‌کنیم سفارش جدید رو داخل لیست
         user_data[chat_id]["orders"].append({"code": code, "count": count})
         user_data[chat_id]["step"] = "more"
         bot.send_message(chat_id, make_rtl("📦 سفارش دیگه‌ای داری؟ (بله / خیر)"))
@@ -94,6 +94,7 @@ def handle_message(message):
         text_file += f"آدرس: {user_data[chat_id]['address']}\n\n"
         text_file += "📦 محصولات سفارش داده شده:\n"
 
+        # همینجا هر کد محصول رو به همراه تعداد داخل فایل می‌نویسیم
         for order in orders:
             text_file += f"- کد محصول: {order['code']} | تعداد: {order['count']}\n"
 
@@ -106,7 +107,6 @@ def handle_message(message):
 
         bot.send_message(chat_id, make_rtl("✅ سفارش ثبت شد. فایل بالا رو برای نهایی کردن ارسال کن به ۰۹۱۲۸۸۸۳۳۴۳"))
 
-        # پاک کردن داده‌های کاربر برای سفارش جدید
         user_data.pop(chat_id)
 
     else:
