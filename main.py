@@ -1,5 +1,5 @@
 import telebot
-from keep_alive import keep_alive  # حواست باشه این فایل هم باشه
+from keep_alive import keep_alive  # فایل keep_alive.py داشته باش
 
 TOKEN = "7739258515:AAEUXIZ3ySZ9xp9W31l7qr__sZkbf6qcKnE"
 bot = telebot.TeleBot(TOKEN)
@@ -8,9 +8,9 @@ keep_alive()
 
 user_data = {}
 
-def make_rtl(text):
-    # فقط برای ساده راست‌چین کردن متن، اینجوری متن رو برعکس میکنیم
-    return '\n'.join(line[::-1] for line in text.split('\n'))
+def rtl_text(text):
+    # اضافه کردن کاراکتر RTL به اول متن برای راست‌چین شدن بهتر در تلگرام
+    return "\u200F" + text
 
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -22,7 +22,7 @@ def start(message):
     welcome_text = ("به ربات فروشگاه 👗 هالستون خوش اومدی!\n\n"
                     "📢 گروه ما: https://t.me/Halston_shop\n\n"
                     "لطفاً کد محصول رو وارد کن:")
-    bot.send_message(chat_id, make_rtl(welcome_text))  # بدون parse_mode
+    bot.send_message(chat_id, rtl_text(welcome_text))
 
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
@@ -31,7 +31,7 @@ def handle_message(message):
 
     if chat_id not in user_data:
         user_data[chat_id] = {"orders": [], "step": "code"}
-        bot.send_message(chat_id, make_rtl("شروع جدید! لطفاً کد محصول رو وارد کن:"))
+        bot.send_message(chat_id, rtl_text("شروع جدید! لطفاً کد محصول رو وارد کن:"))
         return
 
     step = user_data[chat_id]["step"]
@@ -39,42 +39,42 @@ def handle_message(message):
     if step == "code":
         user_data[chat_id]["current_code"] = text
         user_data[chat_id]["step"] = "count"
-        bot.send_message(chat_id, make_rtl("✅ تعداد این محصول رو وارد کن:"))
+        bot.send_message(chat_id, rtl_text("✅ تعداد این محصول رو وارد کن:"))
 
     elif step == "count":
         if not text.isdigit():
-            bot.send_message(chat_id, make_rtl("❗️ لطفاً فقط عدد وارد کن."))
+            bot.send_message(chat_id, rtl_text("❗️ لطفاً فقط عدد وارد کن."))
             return
         count = int(text)
         code = user_data[chat_id]["current_code"]
         user_data[chat_id]["orders"].append({"code": code, "count": count})
         user_data[chat_id]["step"] = "more"
-        bot.send_message(chat_id, make_rtl("📦 سفارش دیگه‌ای داری؟ (بله / خیر)"))
+        bot.send_message(chat_id, rtl_text("📦 سفارش دیگه‌ای داری؟ (بله / خیر)"))
 
     elif step == "more":
         if text.lower() == "بله":
             user_data[chat_id]["step"] = "code"
-            bot.send_message(chat_id, make_rtl("کد محصول بعدی رو وارد کن:"))
+            bot.send_message(chat_id, rtl_text("کد محصول بعدی رو وارد کن:"))
         elif text.lower() == "خیر":
             user_data[chat_id]["step"] = "name"
-            bot.send_message(chat_id, make_rtl("📝 لطفاً نام کاملت رو وارد کن:"))
+            bot.send_message(chat_id, rtl_text("📝 لطفاً نام کاملت رو وارد کن:"))
         else:
-            bot.send_message(chat_id, make_rtl("فقط 'بله' یا 'خیر' بنویس لطفاً."))
+            bot.send_message(chat_id, rtl_text("فقط 'بله' یا 'خیر' بنویس لطفاً."))
 
     elif step == "name":
         user_data[chat_id]["full_name"] = text
         user_data[chat_id]["step"] = "phone"
-        bot.send_message(chat_id, make_rtl("📱 شماره تماس خودت رو وارد کن:"))
+        bot.send_message(chat_id, rtl_text("📱 شماره تماس خودت رو وارد کن:"))
 
     elif step == "phone":
         user_data[chat_id]["phone"] = text
         user_data[chat_id]["step"] = "city"
-        bot.send_message(chat_id, make_rtl("🏙 لطفاً نام شهرت رو وارد کن:"))
+        bot.send_message(chat_id, rtl_text("🏙 لطفاً نام شهرت رو وارد کن:"))
 
     elif step == "city":
         user_data[chat_id]["city"] = text
         user_data[chat_id]["step"] = "address"
-        bot.send_message(chat_id, make_rtl("📍 آدرس دقیق رو وارد کن:"))
+        bot.send_message(chat_id, rtl_text("📍 آدرس دقیق رو وارد کن:"))
 
     elif step == "address":
         user_data[chat_id]["address"] = text
@@ -97,7 +97,7 @@ def handle_message(message):
         with open(file_name, "rb") as f:
             bot.send_document(chat_id, f, visible_file_name="safareshe_shoma.txt")
 
-        bot.send_message(chat_id, make_rtl("✅ سفارش ثبت شد. فایل بالا رو برای نهایی کردن ارسال کن به ۰۹۱۲۸۸۸۳۳۴۳"))
+        bot.send_message(chat_id, rtl_text("✅ سفارش ثبت شد. فایل بالا رو برای نهایی کردن ارسال کن به ۰۹۱۲۸۸۸۳۳۴۳"))
 
         user_data.pop(chat_id)
 
