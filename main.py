@@ -8,7 +8,7 @@ from flask import Flask
 from threading import Thread
 
 # لینک مستقیم فایل زیپ فونت وزیر توی گیت‌هاب (Raw لینک فایل زیپ فونت)
-FONTS_ZIP_URL = 'https://github.com/YourUserName/YourRepo/raw/main/fonts.zip'  # لینک خودت اینجا بذار
+FONTS_ZIP_URL = 'https://github.com/artintaleei90/Artin/raw/main/vazirmatn-v33.003.zip'
 
 # مسیر پوشه فونت‌ها
 FONTS_DIR = 'fonts'
@@ -33,7 +33,7 @@ download_and_extract_fonts()
 # کلاس PDF با فونت وزیر
 class PDF(FPDF):
     def header(self):
-        self.add_font('Vazir', '', f'{FONTS_DIR}/Vazir-Regular.ttf', uni=True)
+        self.add_font('Vazir', '', f'{FONTS_DIR}/Vazirmatn-Regular.ttf', uni=True)
         self.set_font('Vazir', '', 14)
         self.cell(0, 10, 'فاکتور سفارش', 0, 1, 'C')
         self.ln(5)
@@ -72,7 +72,7 @@ def run():
 def keep_alive():
     Thread(target=run).start()
 
-# توکن ربات (توکن خودتو جایگزین کن سلطان)
+# توکن ربات (توکن خود سلطان)
 TOKEN = '7739258515:AAEUXIZ3ySZ9xp9W31l7qr__sZkbf6qcKnE'
 bot = telebot.TeleBot(TOKEN)
 
@@ -152,6 +152,7 @@ def handle_message(message):
             bot.send_document(chat_id, f)
 
         bot.send_message(chat_id, '✅ فاکتور شما ثبت شد. با تشکر از خرید شما!')
+        bot.send_message(chat_id, '📢 برای اطلاع از جدیدترین محصولات، به کانال ما بپیوندید:\nhttps://t.me/Halston_shop')
 
         os.remove(filename)
         user_data.pop(chat_id)
