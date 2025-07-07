@@ -1,5 +1,5 @@
 import telebot
-from keep_alive import keep_alive  # اگر داری
+from keep_alive import keep_alive  # حواست باشه این فایل هم باشه
 
 TOKEN = "7739258515:AAEUXIZ3ySZ9xp9W31l7qr__sZkbf6qcKnE"
 bot = telebot.TeleBot(TOKEN)
@@ -9,10 +9,8 @@ keep_alive()
 user_data = {}
 
 def make_rtl(text):
-    RTL_MARK = '\u200F'
-    lines = text.split('\n')
-    rtl_lines = [RTL_MARK + line for line in lines]
-    return '\n'.join(rtl_lines)
+    # فقط برای ساده راست‌چین کردن متن، اینجوری متن رو برعکس میکنیم
+    return '\n'.join(line[::-1] for line in text.split('\n'))
 
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -21,14 +19,10 @@ def start(message):
         "orders": [],
         "step": "code"
     }
-    welcome_text = """
-به ربات فروشگاه 👗 **هالستون** خوش اومدی!
-
-📢 گروه ما: https://t.me/Halston_shop
-
-لطفاً کد محصول رو وارد کن:
-"""
-    bot.send_message(chat_id, make_rtl(welcome_text), parse_mode="Markdown")
+    welcome_text = ("به ربات فروشگاه 👗 هالستون خوش اومدی!\n\n"
+                    "📢 گروه ما: https://t.me/Halston_shop\n\n"
+                    "لطفاً کد محصول رو وارد کن:")
+    bot.send_message(chat_id, make_rtl(welcome_text))  # بدون parse_mode
 
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
@@ -40,7 +34,7 @@ def handle_message(message):
         bot.send_message(chat_id, make_rtl("شروع جدید! لطفاً کد محصول رو وارد کن:"))
         return
 
-    step = user_data[chat_id].get("step", "code")
+    step = user_data[chat_id]["step"]
 
     if step == "code":
         user_data[chat_id]["current_code"] = text
@@ -53,7 +47,6 @@ def handle_message(message):
             return
         count = int(text)
         code = user_data[chat_id]["current_code"]
-        # اینجا اضافه می‌کنیم سفارش جدید رو داخل لیست
         user_data[chat_id]["orders"].append({"code": code, "count": count})
         user_data[chat_id]["step"] = "more"
         bot.send_message(chat_id, make_rtl("📦 سفارش دیگه‌ای داری؟ (بله / خیر)"))
@@ -94,9 +87,8 @@ def handle_message(message):
         text_file += f"آدرس: {user_data[chat_id]['address']}\n\n"
         text_file += "📦 محصولات سفارش داده شده:\n"
 
-        # همینجا هر کد محصول رو به همراه تعداد داخل فایل می‌نویسیم
         for order in orders:
-            text_file += f"- کد محصول: {order['code']} | تعداد: {order['count']}\n"
+            text_file += f"- کد: {order['code']} | تعداد: {order['count']}\n"
 
         file_name = f"order_{chat_id}.txt"
         with open(file_name, "w", encoding='utf-8') as f:
@@ -108,9 +100,6 @@ def handle_message(message):
         bot.send_message(chat_id, make_rtl("✅ سفارش ثبت شد. فایل بالا رو برای نهایی کردن ارسال کن به ۰۹۱۲۸۸۸۳۳۴۳"))
 
         user_data.pop(chat_id)
-
-    else:
-        bot.send_message(chat_id, make_rtl("لطفاً دستورالعمل‌ها را دنبال کن."))
 
 print("✅ ربات آماده‌ست سلطان!")
 bot.infinity_polling()
