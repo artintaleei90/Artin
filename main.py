@@ -7,45 +7,45 @@ from fpdf import FPDF
 from flask import Flask
 from threading import Thread
 
-# لینک فونت زیپ‌شده داخل GitHub
+# لینک فایل زیپ فونت وزیر (از گیت‌هاب خودت)
 FONTS_ZIP_URL = 'https://github.com/artintaleei90/Artin/raw/main/vazirmatn-v33.003.zip'
+
 FONTS_DIR = 'fonts'
 
-# دانلود فونت
 def download_and_extract_fonts():
     if not os.path.exists(FONTS_DIR):
-        print("⏬ دانلود فونت...")
+        print("دانلود فونت...")
         response = requests.get(FONTS_ZIP_URL)
         if response.status_code == 200:
+            print("استخراج فونت...")
             with zipfile.ZipFile(io.BytesIO(response.content)) as zip_ref:
                 zip_ref.extractall(FONTS_DIR)
-            print("✅ فونت استخراج شد.")
+            print("فونت دانلود و استخراج شد.")
         else:
-            print("❌ دانلود فونت شکست خورد.")
+            print("دانلود فونت موفق نبود!")
     else:
-        print("📁 فونت قبلاً وجود دارد.")
+        print("فونت قبلاً دانلود شده، رد می‌شه.")
 
 download_and_extract_fonts()
 
-# تعریف PDF
 class PDF(FPDF):
     def header(self):
         self.add_font('Vazir', '', f'{FONTS_DIR}/Vazirmatn-Regular.ttf', uni=True)
         self.set_font('Vazir', '', 14)
-        self.cell(0, 10, '🧾 فاکتور سفارش', 0, 1, 'C')
+        self.cell(0, 10, 'فاکتور سفارش', 0, 1, 'C')
         self.ln(5)
 
     def footer(self):
         self.set_y(-15)
-        self.set_font('Vazir', '', 10)
-        self.cell(0, 10, 'مرکز پوشاک هالستون - @Halston_shop', 0, 0, 'C')
+        self.set_font('Vazir', '', 8)
+        self.cell(0, 10, 'مرکز پوشاک هالستون', 0, 0, 'C')
 
     def add_customer_info(self, name, phone, city, address):
         self.set_font('Vazir', '', 12)
-        self.cell(0, 10, f'👤 نام مشتری: {name}', 0, 1, 'R')
-        self.cell(0, 10, f'📞 شماره تماس: {phone}', 0, 1, 'R')
-        self.cell(0, 10, f'🏙 شهر: {city}', 0, 1, 'R')
-        self.multi_cell(0, 10, f'📍 آدرس: {address}', 0, 1, 'R')
+        self.cell(0, 10, f'نام مشتری: {name}', 0, 1, 'R')
+        self.cell(0, 10, f'شماره تماس: {phone}', 0, 1, 'R')
+        self.cell(0, 10, f'شهر: {city}', 0, 1, 'R')
+        self.multi_cell(0, 10, f'آدرس: {address}', 0, 1, 'R')
         self.ln(5)
 
     def add_order_table(self, orders):
@@ -57,11 +57,11 @@ class PDF(FPDF):
             self.cell(80, 10, item['code'], 1, 0, 'C')
             self.cell(40, 10, str(item['count']), 1, 1, 'C')
 
-# زنده نگه داشتن روی Render
 app = Flask('')
+
 @app.route('/')
 def home():
-    return "ربات فعال است."
+    return "ربات هالستون داره کار می‌کنه..."
 
 def run():
     app.run(host='0.0.0.0', port=8080)
@@ -69,10 +69,10 @@ def run():
 def keep_alive():
     Thread(target=run).start()
 
-# 👇 اینجا توکن خودت رو بذار
-TOKEN = os.getenv("7739258515:AAEUXIZ3ySZ9xp9W31l7qr__sZkbf6qcKnE")  # یا مستقیم وارد کن ولی امن نیست
-
+# توکن ربات (توکن خودت رو جایگزین کن سلطان)
+TOKEN = '7739258515:AAEUXIZ3ySZ9xp9W31l7qr__sZkbf6qcKnE'
 bot = telebot.TeleBot(TOKEN)
+
 user_data = {}
 
 keep_alive()
@@ -81,7 +81,7 @@ keep_alive()
 def start(message):
     chat_id = message.chat.id
     user_data[chat_id] = {'orders': [], 'step': 'code'}
-    bot.send_message(chat_id, '🛍 خوش آمدید به فروشگاه هالستون!\nلطفاً کد محصول را وارد کنید.')
+    bot.send_message(chat_id, '🛍 خوش آمدی به ربات فروشگاه هالستون!\nلطفا کد محصول را وارد کن:')
 
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
@@ -100,7 +100,7 @@ def handle_message(message):
 
     elif step == 'count':
         if not text.isdigit():
-            bot.send_message(chat_id, '❗ لطفاً فقط عدد وارد کن.')
+            bot.send_message(chat_id, '❗ لطفا فقط عدد وارد کن.')
             return
         count = int(text)
         code = user_data[chat_id]['current_code']
@@ -116,7 +116,7 @@ def handle_message(message):
             user_data[chat_id]['step'] = 'name'
             bot.send_message(chat_id, '📝 لطفا نام کامل خود را وارد کن:')
         else:
-            bot.send_message(chat_id, 'لطفاً فقط بله یا خیر بنویس.')
+            bot.send_message(chat_id, 'لطفا فقط بله یا خیر بنویس.')
 
     elif step == 'name':
         user_data[chat_id]['name'] = text
@@ -126,7 +126,7 @@ def handle_message(message):
     elif step == 'phone':
         user_data[chat_id]['phone'] = text
         user_data[chat_id]['step'] = 'city'
-        bot.send_message(chat_id, '🏙 شهر را وارد کن:')
+        bot.send_message(chat_id, '🏙 نام شهر را وارد کن:')
 
     elif step == 'city':
         user_data[chat_id]['city'] = text
@@ -148,7 +148,7 @@ def handle_message(message):
         with open(filename, 'rb') as f:
             bot.send_document(chat_id, f)
 
-        bot.send_message(chat_id, '✅ فاکتور شما ثبت شد. با تشکر از خریدتان!\n🛍 کانال ما: [Halston Shop](https://t.me/Halston_shop)', parse_mode='Markdown')
+        bot.send_message(chat_id, '✅ فاکتور شما ثبت شد. با تشکر از خرید شما!\nکانال ما: https://t.me/Halston_shop')
 
         os.remove(filename)
         user_data.pop(chat_id)
