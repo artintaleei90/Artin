@@ -3,3 +3,6 @@ Flask
 requests
 reportlab
 fpdf
+fpdf2
+arabic-reshaper
+python-bidi
