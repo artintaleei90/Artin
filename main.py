@@ -1,13 +1,9 @@
-import os
-import requests, zipfile, io
+import requests, zipfile, io, os, telebot
 from fpdf import FPDF
-from flask import Flask, request
-import telebot
+from flask import Flask
+from threading import Thread
 
-TOKEN = '7739258515:AAEUXIZ3ySZ9xp9W31l7qr__sZkbf6qcKnE'
-bot = telebot.TeleBot(TOKEN)
-app = Flask(__name__)
-
+# لینک مستقیم ZIP فونت
 FONTS_ZIP_URL = 'https://github.com/rastikerdar/vazirmatn/releases/download/v33.003/vazirmatn-v33.003.zip'
 FONTS_DIR = 'fonts'
 FONT_REGULAR = os.path.join(FONTS_DIR, 'fonts', 'ttf', 'Vazirmatn-Regular.ttf')
@@ -15,19 +11,24 @@ FONT_BOLD = os.path.join(FONTS_DIR, 'fonts', 'ttf', 'Vazirmatn-Bold.ttf')
 
 def download_and_extract_fonts():
     if not os.path.exists(FONTS_DIR):
-        print("📦 دانلود فونت‌ها...")
+        print("📦 در حال دانلود فونت‌ها...")
         resp = requests.get(FONTS_ZIP_URL)
         resp.raise_for_status()
+        print("🗜 در حال استخراج فونت‌ها...")
         with zipfile.ZipFile(io.BytesIO(resp.content)) as z:
             z.extractall(FONTS_DIR)
-        print("✅ فونت‌ها استخراج شدند.")
+        print("✅ فونت‌ها با موفقیت استخراج شدند.")
     else:
-        print("✅ فونت‌ها قبلا دانلود شده‌اند.")
+        print("✅ پوشه فونت‌ها وجود دارد، دانلود مجدد نیاز نیست.")
+    if not os.path.isfile(FONT_REGULAR) or not os.path.isfile(FONT_BOLD):
+        raise FileNotFoundError(f"❌ فونت‌ها پیدا نشدند: {FONT_REGULAR} و {FONT_BOLD}")
+    print(f"✅ فونت‌ها پیدا شدند: {FONT_REGULAR} و {FONT_BOLD}")
 
 download_and_extract_fonts()
 
 class PDF(FPDF):
     def header(self):
+        # افزودن فونت‌ها با نام‌های دلخواه و یونیکد
         self.add_font('Vazirmatn', '', FONT_REGULAR, uni=True)
         self.add_font('Vazirmatn', 'B', FONT_BOLD, uni=True)
         self.set_font('Vazirmatn', 'B', 16)
@@ -56,68 +57,76 @@ class PDF(FPDF):
             self.cell(120, 8, o['code'], 1, 0, 'C')
             self.cell(40, 8, str(o['count']), 1, 1, 'C')
 
-user_data = {}
+# --- بقیه کد ربات و Flask مثل قبل ---
 
-@app.route('/' + TOKEN, methods=['POST'])
-def webhook():
-    json_str = request.get_data().decode('utf-8')
-    update = telebot.types.Update.de_json(json_str)
-    bot.process_new_updates([update])
-    return 'ok', 200
-
+app = Flask('')
 @app.route('/')
-def index():
-    return "Bot is running!"
+def home(): return "Bot is running..."
+
+def run(): app.run(host='0.0.0.0', port=8080)
+Thread(target=run).start()
+
+TOKEN = '7739258515:AAEUXIZ3ySZ9xp9W31l7qr__sZkbf6qcKnE'
+CHANNEL_LINK = 'https://t.me/Halston_shop'
+bot = telebot.TeleBot(TOKEN)
+bot.remove_webhook()
+
+user_data = {}
 
 @bot.message_handler(commands=['start'])
 def start(msg):
     chat = msg.chat.id
     user_data[chat] = {'orders': [], 'step': 'code'}
     bot.send_message(chat,
-        '🛍 خوش آمدید به ربات فروشگاه هالستون!\n'
-        'لطفاً کد محصول را ارسال کنید.')
+        f'🛍 خوش آمدید به ربات فروشگاه هالستون!\n\n'
+        f'برای شروع:\nلطفاً *کد محصول* را ارسال کنید.\n\n🌐 کانال ما: {CHANNEL_LINK}',
+        parse_mode='Markdown')
 
 @bot.message_handler(func=lambda m: True)
-def handle_message(msg):
-    chat = msg.chat.id
-    txt = msg.text.strip()
+def handle_message(m):
+    chat = m.chat.id
+    txt = m.text.strip()
     if chat not in user_data:
-        start(msg)
-        return
+        return start(m)
     s = user_data[chat]['step']
 
     if s == 'code':
         user_data[chat]['current_code'] = txt
         user_data[chat]['step'] = 'count'
-        bot.send_message(chat, '✅ تعداد را وارد کنید:')
+        bot.send_message(chat, '✅ *تعداد* را وارد کن:', parse_mode='Markdown')
+
     elif s == 'count':
         if not txt.isdigit():
-            bot.send_message(chat, '❗ لطفاً فقط عدد وارد کنید.')
-            return
+            return bot.send_message(chat, '❗ لطفاً فقط عدد وارد کن.')
         user_data[chat]['orders'].append({'code': user_data[chat]['current_code'], 'count': int(txt)})
         user_data[chat]['step'] = 'more'
-        bot.send_message(chat, 'محصول دیگری دارید؟ (بله/خیر)')
+        bot.send_message(chat, 'محصول دیگه‌ای داری؟ (بله/خیر)')
+
     elif s == 'more':
         if txt.lower() == 'بله':
             user_data[chat]['step'] = 'code'
-            bot.send_message(chat, 'کد محصول بعدی را ارسال کنید:')
+            bot.send_message(chat, 'کد محصول بعدی را ارسال کن:')
         elif txt.lower() == 'خیر':
             user_data[chat]['step'] = 'name'
-            bot.send_message(chat, '📝 لطفاً نام کامل خود را وارد کنید:')
+            bot.send_message(chat, '📝 لطفاً نام کامل را وارد کن:')
         else:
-            bot.send_message(chat, 'لطفاً فقط "بله" یا "خیر" وارد کنید.')
+            bot.send_message(chat, 'لطفاً فقط *بله* یا *خیر* بنویس.', parse_mode='Markdown')
+
     elif s == 'name':
         user_data[chat]['name'] = txt
         user_data[chat]['step'] = 'phone'
-        bot.send_message(chat, '📱 شماره تماس را وارد کنید:')
+        bot.send_message(chat, '📱 شماره تماس را وارد کن:')
+
     elif s == 'phone':
         user_data[chat]['phone'] = txt
         user_data[chat]['step'] = 'city'
-        bot.send_message(chat, '🏙 نام شهر را وارد کنید:')
+        bot.send_message(chat, '🏙 نام شهر را وارد کن:')
+
     elif s == 'city':
         user_data[chat]['city'] = txt
         user_data[chat]['step'] = 'address'
-        bot.send_message(chat, '📍 آدرس دقیق را وارد کنید:')
+        bot.send_message(chat, '📍 آدرس دقیق را وارد کن:')
+
     elif s == 'address':
         user_data[chat]['address'] = txt
         d = user_data[chat]
@@ -128,25 +137,12 @@ def handle_message(msg):
         pdf.add_order_table(d['orders'])
 
         fn = f'order_{chat}.pdf'
+        pdf.output(fn)
 
-        try:
-            pdf.output(fn)
-            with open(fn, 'rb') as f:
-                bot.send_document(chat, f)
-            bot.send_message(chat, '✅ فاکتور شما ثبت شد!\n🌐 کانال ما: https://t.me/Halston_shop')
-            print(f"[INFO] PDF ساخته و ارسال شد برای {chat}")
-        except Exception as e:
-            print(f"[ERROR] هنگام ساخت یا ارسال PDF: {e}")
-            bot.send_message(chat, '⚠️ خطایی رخ داد، لطفا دوباره تلاش کنید.')
-
-        if os.path.exists(fn):
-            os.remove(fn)
-
+        with open(fn, 'rb') as f:
+            bot.send_document(chat, f)
+        bot.send_message(chat, f'✅ فاکتور شما ثبت شد!\n🌐 کانال ما: {CHANNEL_LINK}')
+        os.remove(fn)
         user_data.pop(chat)
 
-if __name__ == "__main__":
-    # حذف webhook قبلی و تنظیم webhook جدید
-    print(bot.remove_webhook())
-    bot.set_webhook(url='https://artin-um4v.onrender.com/' + TOKEN)
-
-    app.run(host='0.0.0.0', port=8080)
+bot.infinity_polling()
