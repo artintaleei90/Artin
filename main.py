@@ -270,7 +270,7 @@ def handle_message(msg):
                 create_pdf(filename, data)
                 with open(filename, 'rb') as f:
                     bot.send_document(cid, f)
-                bot.send_message(cid, '✅ فاکتور شما ارسال شد. ممنون از خرید شما 🙏')
+                bot.send_message(cid, '✅ فاکتور شما ارسال شد. ممنون از خرید شما 🙏برای نهایی کردن به شماره09128883343در واتساپ پیام دهید')
             except Exception as e:
                 bot.send_message(cid, f'❌ خطا در ساخت یا ارسال فاکتور: {e}')
             finally:
