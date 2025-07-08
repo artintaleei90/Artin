@@ -144,17 +144,14 @@ def handle_message(m):
         pdf.add_customer_info(d['name'], d['phone'], d['city'], d['address'])
         pdf.add_order_table(d['orders'])
 
-        filename = f'/tmp/order_{chat}.pdf'  # استفاده از مسیر موقت
+        filename = f'order_{chat}.pdf'
+        pdf.output(filename)
 
-        try:
-            pdf.output(filename)
-            with open(filename, 'rb') as f:
-                bot.send_document(chat, f)
-            os.remove(filename)
-            bot.send_message(chat, f'✅ فاکتور شما ثبت شد!\n🌐 کانال ما: {CHANNEL_LINK}')
-        except Exception as e:
-            bot.send_message(chat, f'❌ خطا در ساخت یا ارسال فاکتور:\n{e}')
+        with open(filename, 'rb') as f:
+            bot.send_document(chat, f)
 
+        os.remove(filename)
+        bot.send_message(chat, f'✅ فاکتور شما ثبت شد!\n🌐 کانال ما: {CHANNEL_LINK}')
         user_data.pop(chat)
 
 # === حذف وب‌هوک قبلی و ست کردن وب‌هوک جدید ===
