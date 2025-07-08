@@ -1,148 +1,64 @@
-import requests, zipfile, io, os, telebot
+import telebot
 from fpdf import FPDF
-from flask import Flask
-from threading import Thread
-
-# لینک مستقیم ZIP فونت
-FONTS_ZIP_URL = 'https://github.com/rastikerdar/vazirmatn/releases/download/v33.003/vazirmatn-v33.003.zip'
-FONTS_DIR = 'fonts'
-FONT_REGULAR = os.path.join(FONTS_DIR, 'fonts', 'ttf', 'Vazirmatn-Regular.ttf')
-FONT_BOLD = os.path.join(FONTS_DIR, 'fonts', 'ttf', 'Vazirmatn-Bold.ttf')
-
-def download_and_extract_fonts():
-    if not os.path.exists(FONTS_DIR):
-        print("📦 در حال دانلود فونت‌ها...")
-        resp = requests.get(FONTS_ZIP_URL)
-        resp.raise_for_status()
-        print("🗜 در حال استخراج فونت‌ها...")
-        with zipfile.ZipFile(io.BytesIO(resp.content)) as z:
-            z.extractall(FONTS_DIR)
-        print("✅ فونت‌ها با موفقیت استخراج شدند.")
-    else:
-        print("✅ پوشه فونت‌ها وجود دارد، دانلود مجدد نیاز نیست.")
-    if not os.path.isfile(FONT_REGULAR) or not os.path.isfile(FONT_BOLD):
-        raise FileNotFoundError(f"❌ فونت‌ها پیدا نشدند: {FONT_REGULAR} و {FONT_BOLD}")
-    print(f"✅ فونت‌ها پیدا شدند: {FONT_REGULAR} و {FONT_BOLD}")
-
-download_and_extract_fonts()
-
-class PDF(FPDF):
-    def header(self):
-        # افزودن فونت‌ها با نام‌های دلخواه و یونیکد
-        self.add_font('Vazirmatn', '', FONT_REGULAR, uni=True)
-        self.add_font('Vazirmatn', 'B', FONT_BOLD, uni=True)
-        self.set_font('Vazirmatn', 'B', 16)
-        self.cell(0, 10, 'فاکتور سفارش', 0, 1, 'C')
-        self.ln(5)
-
-    def footer(self):
-        self.set_y(-15)
-        self.set_font('Vazirmatn', '', 10)
-        self.cell(0, 10, 'مرکز پوشاک هالستون', 0, 0, 'C')
-
-    def add_customer_info(self, name, phone, city, address):
-        self.set_font('Vazirmatn', '', 12)
-        self.cell(0, 8, f'نام مشتری: {name}', 0, 1, 'R')
-        self.cell(0, 8, f'شماره تماس: {phone}', 0, 1, 'R')
-        self.cell(0, 8, f'شهر: {city}', 0, 1, 'R')
-        self.multi_cell(0, 8, f'آدرس: {address}', 0, 'R')
-        self.ln(5)
-
-    def add_order_table(self, orders):
-        self.set_font('Vazirmatn', 'B', 12)
-        self.cell(120, 8, 'کد محصول', 1, 0, 'C')
-        self.cell(40, 8, 'تعداد', 1, 1, 'C')
-        self.set_font('Vazirmatn', '', 12)
-        for o in orders:
-            self.cell(120, 8, o['code'], 1, 0, 'C')
-            self.cell(40, 8, str(o['count']), 1, 1, 'C')
-
-# --- بقیه کد ربات و Flask مثل قبل ---
-
-app = Flask('')
-@app.route('/')
-def home(): return "Bot is running..."
-
-def run(): app.run(host='0.0.0.0', port=8080)
-Thread(target=run).start()
+import os
 
 TOKEN = '7739258515:AAEUXIZ3ySZ9xp9W31l7qr__sZkbf6qcKnE'
-CHANNEL_LINK = 'https://t.me/Halston_shop'
-bot = telebot.TeleBot(TOKEN)
-bot.remove_webhook()
+CHANNEL_LINK = 'https://t.me/your_channel_link'  # لینک کانال خودت را اینجا قرار بده
 
-user_data = {}
+bot = telebot.TeleBot(TOKEN)
+
+# کلاس PDF با پشتیبانی فونت فارسی
+class PDF(FPDF):
+    def header(self):
+        self.set_font('Vazirmatn', 'B', 16)
+        self.cell(0, 10, 'فاکتور سفارش', 0, 1, 'C')
+
+    def add_order_table(self, orders):
+        self.set_font('Vazirmatn', '', 14)
+        for i, order in enumerate(orders, 1):
+            self.cell(0, 10, f"{i}. محصول: {order['product']} - تعداد: {order['qty']}", 0, 1)
+
+def add_farsi_font(pdf):
+    # اگر فونت در فولدر fonts/ttf وجود دارد اضافه می‌شود
+    pdf.add_font('Vazirmatn', '', 'fonts/fonts/ttf/Vazirmatn-Regular.ttf', uni=True)
+    pdf.add_font('Vazirmatn', 'B', 'fonts/fonts/ttf/Vazirmatn-Bold.ttf', uni=True)
 
 @bot.message_handler(commands=['start'])
-def start(msg):
-    chat = msg.chat.id
-    user_data[chat] = {'orders': [], 'step': 'code'}
-    bot.send_message(chat,
-        f'🛍 خوش آمدید به ربات فروشگاه هالستون!\n\n'
-        f'برای شروع:\nلطفاً *کد محصول* را ارسال کنید.\n\n🌐 کانال ما: {CHANNEL_LINK}',
-        parse_mode='Markdown')
+def start(message):
+    chat_id = message.chat.id
+    text = (
+        "🛍 خوش آمدید به ربات فروشگاه هالستون!\n\n"
+        "برای شروع لطفاً *کد محصول* را ارسال کنید.\n\n"
+        f"🌐 کانال ما: {CHANNEL_LINK}"
+    )
+    # ارسال پیام بدون parse_mode چون متن ساده است و باعث ارور نمی‌شود
+    bot.send_message(chat_id, text)
 
-@bot.message_handler(func=lambda m: True)
-def handle_message(m):
-    chat = m.chat.id
-    txt = m.text.strip()
-    if chat not in user_data:
-        return start(m)
-    s = user_data[chat]['step']
+@bot.message_handler(func=lambda message: True)
+def handle_order(message):
+    chat_id = message.chat.id
+    code = message.text.strip()
 
-    if s == 'code':
-        user_data[chat]['current_code'] = txt
-        user_data[chat]['step'] = 'count'
-        bot.send_message(chat, '✅ *تعداد* را وارد کن:', parse_mode='Markdown')
+    # نمونه سفارش با کد دریافتی
+    orders = [{'product': code, 'qty': 1}]
 
-    elif s == 'count':
-        if not txt.isdigit():
-            return bot.send_message(chat, '❗ لطفاً فقط عدد وارد کن.')
-        user_data[chat]['orders'].append({'code': user_data[chat]['current_code'], 'count': int(txt)})
-        user_data[chat]['step'] = 'more'
-        bot.send_message(chat, 'محصول دیگه‌ای داری؟ (بله/خیر)')
+    pdf = PDF()
+    add_farsi_font(pdf)
+    pdf.add_page()
+    pdf.add_order_table(orders)
 
-    elif s == 'more':
-        if txt.lower() == 'بله':
-            user_data[chat]['step'] = 'code'
-            bot.send_message(chat, 'کد محصول بعدی را ارسال کن:')
-        elif txt.lower() == 'خیر':
-            user_data[chat]['step'] = 'name'
-            bot.send_message(chat, '📝 لطفاً نام کامل را وارد کن:')
-        else:
-            bot.send_message(chat, 'لطفاً فقط *بله* یا *خیر* بنویس.', parse_mode='Markdown')
+    filename = f"{chat_id}_order.pdf"
+    pdf.output(filename)
 
-    elif s == 'name':
-        user_data[chat]['name'] = txt
-        user_data[chat]['step'] = 'phone'
-        bot.send_message(chat, '📱 شماره تماس را وارد کن:')
+    with open(filename, 'rb') as file:
+        bot.send_document(chat_id, file)
 
-    elif s == 'phone':
-        user_data[chat]['phone'] = txt
-        user_data[chat]['step'] = 'city'
-        bot.send_message(chat, '🏙 نام شهر را وارد کن:')
+    bot.send_message(chat_id, "فاکتور سفارش شما ارسال شد.")
 
-    elif s == 'city':
-        user_data[chat]['city'] = txt
-        user_data[chat]['step'] = 'address'
-        bot.send_message(chat, '📍 آدرس دقیق را وارد کن:')
+    # حذف فایل پس از ارسال برای صرفه جویی در فضا
+    if os.path.exists(filename):
+        os.remove(filename)
 
-    elif s == 'address':
-        user_data[chat]['address'] = txt
-        d = user_data[chat]
-
-        pdf = PDF()
-        pdf.add_page()
-        pdf.add_customer_info(d['name'], d['phone'], d['city'], d['address'])
-        pdf.add_order_table(d['orders'])
-
-        fn = f'order_{chat}.pdf'
-        pdf.output(fn)
-
-        with open(fn, 'rb') as f:
-            bot.send_document(chat, f)
-        bot.send_message(chat, f'✅ فاکتور شما ثبت شد!\n🌐 کانال ما: {CHANNEL_LINK}')
-        os.remove(fn)
-        user_data.pop(chat)
-
-bot.infinity_polling()
+if __name__ == "__main__":
+    print("ربات آماده است و شروع به کار کرد.")
+    bot.polling(non_stop=True)
