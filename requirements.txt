@@ -2,7 +2,6 @@ pyTelegramBotAPI
 Flask
 requests
 reportlab
-fpdf==1.7.2
 fpdf2
 arabic-reshaper
 python-bidi
