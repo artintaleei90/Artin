@@ -1,10 +1,14 @@
-import os, telebot, requests, zipfile, io
+import os
+import telebot
+import requests
+import zipfile
+import io
 from fpdf import FPDF
 from flask import Flask, request
 
 # === تنظیمات اولیه ===
 TOKEN = '7739258515:AAEUXIZ3ySZ9xp9W31l7qr__sZkbf6qcKnE'
-WEBHOOK_URL = f'https://artin-um4v.onrender.com/{TOKEN}'  # مسیر دقیق وب‌هوک
+WEBHOOK_URL = f'https://artin-um4v.onrender.com/{TOKEN}'  # آدرس وب‌هوک کامل با توکن
 CHANNEL_LINK = 'https://t.me/Halston_shop'
 
 bot = telebot.TeleBot(TOKEN)
@@ -58,24 +62,19 @@ class PDF(FPDF):
             self.cell(120, 8, o['code'], 1, 0, 'C')
             self.cell(40, 8, str(o['count']), 1, 1, 'C')
 
-# === Webhook endpoint ===
+# === مسیر وب‌هوک مخصوص تلگرام ===
 @app.route(f'/{TOKEN}', methods=['POST'])
 def webhook():
-    try:
-        json_str = request.get_data().decode('utf-8')
-        print(f"📩 دریافت داده: {json_str}")
-        update = telebot.types.Update.de_json(json_str)
-        bot.process_new_updates([update])
-        return 'OK', 200
-    except Exception as e:
-        print(f"❌ خطا در پردازش وب‌هوک: {e}")
-        return 'Error', 500
+    json_str = request.get_data().decode('utf-8')
+    update = telebot.types.Update.de_json(json_str)
+    bot.process_new_updates([update])
+    return 'ok', 200
 
 @app.route('/', methods=['GET'])
 def index():
-    return "🤖 ربات فعال است."
+    return "🤖 ربات فروشگاه هالستون فعال است."
 
-# === هندلرهای ربات ===
+# === هندلرهای تلگرام ===
 @bot.message_handler(commands=['start'])
 def start(msg):
     chat = msg.chat.id
@@ -84,13 +83,11 @@ def start(msg):
         f'🛍 خوش آمدید به ربات فروشگاه هالستون!\n\n'
         f'برای شروع:\nلطفاً *کد محصول* را ارسال کنید.\n\n🌐 کانال ما: {CHANNEL_LINK}',
         parse_mode='Markdown')
-    print(f"✅ کاربر {chat} استارت داد.")
 
 @bot.message_handler(func=lambda m: True)
 def handle_message(m):
     chat = m.chat.id
     txt = m.text.strip()
-    print(f"📝 پیام از {chat}: {txt}")
     if chat not in user_data:
         return start(m)
     s = user_data[chat]['step']
@@ -149,9 +146,8 @@ def handle_message(m):
         bot.send_message(chat, f'✅ فاکتور شما ثبت شد!\n🌐 کانال ما: {CHANNEL_LINK}')
         os.remove(fn)
         user_data.pop(chat)
-        print(f"✅ فاکتور برای کاربر {chat} ارسال شد.")
 
-# === تنظیم وب‌هوک ===
+# === حذف وب‌هوک قدیمی و ست کردن وب‌هوک جدید ===
 print("در حال حذف وب‌هوک قدیمی...")
 bot.remove_webhook()
 print(f"در حال ست‌کردن وب‌هوک به {WEBHOOK_URL} ...")
@@ -160,6 +156,6 @@ print("وب‌هوک ست شد!")
 
 # === اجرای اپلیکیشن ===
 if __name__ == "__main__":
-    port = int(os.environ.get('PORT', 8080))
+    port = int(os.environ.get('PORT', 10000))
     print(f"سرور روی پورت {port} اجرا شد.")
     app.run(host="0.0.0.0", port=port)
