@@ -1,19 +1,21 @@
-import os, telebot, requests, zipfile, io
+import os
+import telebot
+import requests
+import zipfile
+import io
 from fpdf import FPDF
 from flask import Flask, request
-import arabic_reshaper
-from bidi.algorithm import get_display
 
-# === توکن ربات و آدرس وب‌هوک (حتما توکن رو اینجا بذار) ===
+# === تنظیمات اولیه ===
 TOKEN = '7739258515:AAEUXIZ3ySZ9xp9W31l7qr__sZkbf6qcKnE'
-WEBHOOK_URL = 'https://artin-um4v.onrender.com/' + TOKEN
+WEBHOOK_URL = f'https://artin-um4v.onrender.com/{TOKEN}'  # آدرس وب‌هوک به همراه توکن
 CHANNEL_LINK = 'https://t.me/Halston_shop'
 
 bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
 user_data = {}
 
-# === دانلود فونت فارسی Vazirmatn ===
+# === دانلود و استخراج فونت فارسی ===
 FONTS_ZIP_URL = 'https://github.com/rastikerdar/vazirmatn/releases/download/v33.003/vazirmatn-v33.003.zip'
 FONTS_DIR = 'fonts'
 FONT_REGULAR = os.path.join(FONTS_DIR, 'fonts', 'ttf', 'Vazirmatn-Regular.ttf')
@@ -29,45 +31,39 @@ def download_fonts():
 
 download_fonts()
 
-# === تابع اصلاح متن فارسی برای PDF ===
-def reshape_text(text):
-    reshaped = arabic_reshaper.reshape(text)
-    bidi_text = get_display(reshaped)
-    return bidi_text
-
-# === کلاس PDF با فونت فارسی و پشتیبانی bidi ===
+# === کلاس ساخت PDF ===
 class PDF(FPDF):
     def header(self):
         self.add_font('Vazir', '', FONT_REGULAR, uni=True)
         self.add_font('Vazir', 'B', FONT_BOLD, uni=True)
         self.set_font('Vazir', 'B', 16)
-        self.cell(0, 10, reshape_text('فاکتور سفارش'), 0, 1, 'C')
+        self.cell(0, 10, 'فاکتور سفارش', 0, 1, 'C')
         self.ln(5)
 
     def footer(self):
         self.set_y(-15)
         self.set_font('Vazir', '', 10)
-        self.cell(0, 10, reshape_text('مرکز پوشاک هالستون'), 0, 0, 'C')
+        self.cell(0, 10, 'مرکز پوشاک هالستون', 0, 0, 'C')
 
     def add_customer_info(self, name, phone, city, address):
         self.set_font('Vazir', '', 12)
-        self.cell(0, 8, reshape_text(f'نام مشتری: {name}'), 0, 1, 'R')
-        self.cell(0, 8, reshape_text(f'شماره تماس: {phone}'), 0, 1, 'R')
-        self.cell(0, 8, reshape_text(f'شهر: {city}'), 0, 1, 'R')
-        self.multi_cell(0, 8, reshape_text(f'آدرس: {address}'), 0, 'R')
+        self.cell(0, 8, f'نام مشتری: {name}', 0, 1, 'R')
+        self.cell(0, 8, f'شماره تماس: {phone}', 0, 1, 'R')
+        self.cell(0, 8, f'شهر: {city}', 0, 1, 'R')
+        self.multi_cell(0, 8, f'آدرس: {address}', 0, 'R')
         self.ln(5)
 
     def add_order_table(self, orders):
         self.set_font('Vazir', 'B', 12)
-        self.cell(120, 8, reshape_text('کد محصول'), 1, 0, 'C')
-        self.cell(40, 8, reshape_text('تعداد'), 1, 1, 'C')
+        self.cell(120, 8, 'کد محصول', 1, 0, 'C')
+        self.cell(40, 8, 'تعداد', 1, 1, 'C')
         self.set_font('Vazir', '', 12)
         for o in orders:
-            self.cell(120, 8, reshape_text(o['code']), 1, 0, 'C')
+            self.cell(120, 8, o['code'], 1, 0, 'C')
             self.cell(40, 8, str(o['count']), 1, 1, 'C')
 
-# === مسیر وب‌هوک با توکن ===
-@app.route('/' + TOKEN, methods=['POST'])
+# === Webhook endpoint ===
+@app.route(f'/{TOKEN}', methods=['POST'])
 def webhook():
     update = telebot.types.Update.de_json(request.stream.read().decode("utf-8"))
     bot.process_new_updates([update])
@@ -150,7 +146,8 @@ def handle_message(m):
         os.remove(fn)
         user_data.pop(chat)
 
-# === ست کردن وب‌هوک ===
+# === تنظیم وب‌هوک ===
+bot.remove_webhook()
 bot.set_webhook(url=WEBHOOK_URL)
 
 # === اجرای اپلیکیشن ===
