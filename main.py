@@ -1,39 +1,33 @@
-import os
-import telebot
-import requests
-import zipfile
-import io
+import os, telebot, requests, zipfile, io
 from fpdf import FPDF
 from flask import Flask, request
 
-# ===== تنظیمات اولیه =====
+# === تنظیمات اولیه ===
 TOKEN = '7739258515:AAEUXIZ3ySZ9xp9W31l7qr__sZkbf6qcKnE'
-WEBHOOK_URL = f'https://artin-um4v.onrender.com/{TOKEN}'  # حتما همین مسیر باشه
+WEBHOOK_URL = f'https://artin-um4v.onrender.com/{TOKEN}'
 CHANNEL_LINK = 'https://t.me/Halston_shop'
 
 bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
 user_data = {}
 
-# ===== دانلود و استخراج فونت فارسی =====
+# === دانلود و استخراج فونت فارسی ===
 FONTS_ZIP_URL = 'https://github.com/rastikerdar/vazirmatn/releases/download/v33.003/vazirmatn-v33.003.zip'
 FONTS_DIR = 'fonts'
 FONT_REGULAR = os.path.join(FONTS_DIR, 'fonts', 'ttf', 'Vazirmatn-Regular.ttf')
 FONT_BOLD = os.path.join(FONTS_DIR, 'fonts', 'ttf', 'Vazirmatn-Bold.ttf')
 
 def download_fonts():
-    if not os.path.exists(FONT_REGULAR) or not os.path.exists(FONT_BOLD):
-        print("📦 در حال دانلود فونت‌ها...")
+    if not os.path.exists(FONT_REGULAR):
+        print("📦 در حال دانلود فونت...")
         r = requests.get(FONTS_ZIP_URL)
         z = zipfile.ZipFile(io.BytesIO(r.content))
         z.extractall(FONTS_DIR)
-        print("✅ فونت‌ها استخراج شدند.")
-    else:
-        print("✅ فونت‌ها قبلا دانلود شده‌اند.")
+        print("✅ فونت استخراج شد.")
 
 download_fonts()
 
-# ===== کلاس ساخت PDF با فونت فارسی =====
+# === کلاس ساخت PDF ===
 class PDF(FPDF):
     def header(self):
         self.add_font('Vazir', '', FONT_REGULAR, uni=True)
@@ -64,19 +58,20 @@ class PDF(FPDF):
             self.cell(120, 8, o['code'], 1, 0, 'C')
             self.cell(40, 8, str(o['count']), 1, 1, 'C')
 
-# ===== هندلر وب‌هوک =====
+# === Webhook endpoint ===
 @app.route(f'/{TOKEN}', methods=['POST'])
 def webhook():
     json_string = request.get_data().decode('utf-8')
     update = telebot.types.Update.de_json(json_string)
+    print("دریافت پیام:", json_string)  # دیباگ: چاپ پیام دریافتی
     bot.process_new_updates([update])
     return 'ok', 200
 
 @app.route('/', methods=['GET'])
 def index():
-    return "🤖 ربات فعال است.", 200
+    return "🤖 ربات فعال است."
 
-# ===== هندلرهای ربات =====
+# === هندلرهای ربات ===
 @bot.message_handler(commands=['start'])
 def start(msg):
     chat = msg.chat.id
@@ -88,6 +83,7 @@ def start(msg):
 
 @bot.message_handler(func=lambda m: True)
 def handle_message(m):
+    print(f"پیام رسید: {m.text} از کاربر {m.chat.id}")  # دیباگ: چاپ متن پیام و آی‌دی کاربر
     chat = m.chat.id
     txt = m.text.strip()
     if chat not in user_data:
@@ -149,14 +145,15 @@ def handle_message(m):
         os.remove(fn)
         user_data.pop(chat)
 
-# ===== حذف وب‌هوک قدیمی و ست‌کردن وب‌هوک جدید =====
+# === حذف وب‌هوک قدیمی و ست‌کردن وب‌هوک جدید ===
 print("در حال حذف وب‌هوک قدیمی...")
 bot.remove_webhook()
 print(f"در حال ست‌کردن وب‌هوک به {WEBHOOK_URL} ...")
 bot.set_webhook(url=WEBHOOK_URL)
 print("وب‌هوک ست شد!")
 
-# ===== اجرای اپلیکیشن =====
+# === اجرای اپلیکیشن ===
 if __name__ == "__main__":
-    port = int(os.environ.get('PORT', 8080))  # در Render پورت از متغیر محیطی میاد
+    port = int(os.environ.get('PORT', 10000))  # پورت رندر: 10000
+    print(f"سرور روی پورت {port} اجرا شد.")
     app.run(host="0.0.0.0", port=port)
