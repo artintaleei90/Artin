@@ -78,84 +78,86 @@ def index():
     return "🤖 ربات فروشگاه هالستون فعال است."
 
 # === هندلرهای ربات ===
-@bot.message_handler(func=lambda m: True)
-def handle_message(m):
-    chat = m.chat.id
-    bot.send_message(chat, "✅ پیام شما دریافت شد!")  # این خط رو اضافه کن برای تست
-    text = m.text.strip()
-    # ... ادامه کد قبلی
+@bot.message_handler(commands=['start'])
+def start(msg):
+    chat = msg.chat.id
+    user_data[chat] = {'orders': [], 'step': 'code'}
+    bot.send_message(chat,
+        f'🛍 خوش آمدید به ربات فروشگاه هالستون!\n\n'
+        f'برای شروع:\nلطفاً *کد محصول* را ارسال کنید.\n\n🌐 کانال ما: {CHANNEL_LINK}',
+        parse_mode='Markdown')
 
 @bot.message_handler(func=lambda m: True)
 def handle_message(m):
     chat = m.chat.id
     text = m.text.strip()
-    try:
-        if chat not in user_data:
-            start(m)
+    if chat not in user_data:
+        start(m)
+        return
+
+    step = user_data[chat]['step']
+
+    if step == 'code':
+        user_data[chat]['current_code'] = text
+        user_data[chat]['step'] = 'count'
+        bot.send_message(chat, '✅ *تعداد* را وارد کن:', parse_mode='Markdown')
+
+    elif step == 'count':
+        if not text.isdigit():
+            bot.send_message(chat, '❗ لطفاً فقط عدد وارد کن.')
             return
+        user_data[chat]['orders'].append({'code': user_data[chat]['current_code'], 'count': int(text)})
+        user_data[chat]['step'] = 'more'
+        bot.send_message(chat, 'محصول دیگه‌ای داری؟ (بله/خیر)')
 
-        step = user_data[chat]['step']
+    elif step == 'more':
+        if text.lower() == 'بله':
+            user_data[chat]['step'] = 'code'
+            bot.send_message(chat, 'کد محصول بعدی را ارسال کن:')
+        elif text.lower() == 'خیر':
+            user_data[chat]['step'] = 'name'
+            bot.send_message(chat, '📝 لطفاً نام کامل را وارد کن:')
+        else:
+            bot.send_message(chat, 'لطفاً فقط *بله* یا *خیر* بنویس.', parse_mode='Markdown')
 
-        if step == 'code':
-            user_data[chat]['current_code'] = text
-            user_data[chat]['step'] = 'count'
-            bot.send_message(chat, '✅ *تعداد* را وارد کن:', parse_mode='Markdown')
+    elif step == 'name':
+        user_data[chat]['name'] = text
+        user_data[chat]['step'] = 'phone'
+        bot.send_message(chat, '📱 شماره تماس را وارد کن:')
 
-        elif step == 'count':
-            if not text.isdigit():
-                bot.send_message(chat, '❗ لطفاً فقط عدد وارد کن.')
-                return
-            user_data[chat]['orders'].append({'code': user_data[chat]['current_code'], 'count': int(text)})
-            user_data[chat]['step'] = 'more'
-            bot.send_message(chat, 'محصول دیگه‌ای داری؟ (بله/خیر)')
+    elif step == 'phone':
+        user_data[chat]['phone'] = text
+        user_data[chat]['step'] = 'city'
+        bot.send_message(chat, '🏙 نام شهر را وارد کن:')
 
-        elif step == 'more':
-            if text.lower() == 'بله':
-                user_data[chat]['step'] = 'code'
-                bot.send_message(chat, 'کد محصول بعدی را ارسال کن:')
-            elif text.lower() == 'خیر':
-                user_data[chat]['step'] = 'name'
-                bot.send_message(chat, '📝 لطفاً نام کامل را وارد کن:')
-            else:
-                bot.send_message(chat, 'لطفاً فقط *بله* یا *خیر* بنویس.', parse_mode='Markdown')
+    elif step == 'city':
+        user_data[chat]['city'] = text
+        user_data[chat]['step'] = 'address'
+        bot.send_message(chat, '📍 آدرس دقیق را وارد کن:')
 
-        elif step == 'name':
-            user_data[chat]['name'] = text
-            user_data[chat]['step'] = 'phone'
-            bot.send_message(chat, '📱 شماره تماس را وارد کن:')
+    elif step == 'address':
+        user_data[chat]['address'] = text
+        d = user_data[chat]
 
-        elif step == 'phone':
-            user_data[chat]['phone'] = text
-            user_data[chat]['step'] = 'city'
-            bot.send_message(chat, '🏙 نام شهر را وارد کن:')
+        pdf = PDF()
+        pdf.add_page()
+        pdf.add_customer_info(d['name'], d['phone'], d['city'], d['address'])
+        pdf.add_order_table(d['orders'])
 
-        elif step == 'city':
-            user_data[chat]['city'] = text
-            user_data[chat]['step'] = 'address'
-            bot.send_message(chat, '📍 آدرس دقیق را وارد کن:')
+        filename = f'order_{chat}.pdf'
+        pdf.output(filename)
+        print(f"PDF ساخته شد: {filename} با حجم {os.path.getsize(filename)} بایت")
 
-        elif step == 'address':
-            user_data[chat]['address'] = text
-            d = user_data[chat]
-
-            pdf = PDF()
-            pdf.add_page()
-            pdf.add_customer_info(d['name'], d['phone'], d['city'], d['address'])
-            pdf.add_order_table(d['orders'])
-
-            filename = f'/tmp/order_{chat}.pdf'  # مسیر موقت مناسب برای هاست
-            pdf.output(filename)
-
+        try:
             with open(filename, 'rb') as f:
                 bot.send_document(chat, f)
+        except Exception as e:
+            print(f"خطا در ارسال PDF: {e}")
+            bot.send_message(chat, "متأسفانه خطایی در ارسال فاکتور رخ داد.")
 
-            os.remove(filename)
-            bot.send_message(chat, f'✅ فاکتور شما ثبت شد!\n🌐 کانال ما: {CHANNEL_LINK}')
-            user_data.pop(chat)
-
-    except Exception as e:
-        print(f"[ERROR] chat_id={chat}, step={user_data.get(chat, {}).get('step')}, error: {e}")
-        bot.send_message(chat, f"❌ خطا در پردازش درخواست شما:\n{e}")
+        os.remove(filename)
+        bot.send_message(chat, f'✅ فاکتور شما ثبت شد!\n🌐 کانال ما: {CHANNEL_LINK}')
+        user_data.pop(chat)
 
 # === حذف وب‌هوک قبلی و ست کردن وب‌هوک جدید ===
 print("در حال حذف وب‌هوک قدیمی...")
