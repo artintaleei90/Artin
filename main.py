@@ -1,14 +1,10 @@
-import os
-import telebot
-import requests
-import zipfile
-import io
+import os, telebot, requests, zipfile, io
 from fpdf import FPDF
 from flask import Flask, request
 
 # === تنظیمات اولیه ===
 TOKEN = '7739258515:AAEUXIZ3ySZ9xp9W31l7qr__sZkbf6qcKnE'
-WEBHOOK_URL = f'https://artin-um4v.onrender.com/{TOKEN}'  # مهم: آدرس وب‌هوک باید شامل توکن باشد
+WEBHOOK_URL = f'https://artin-um4v.onrender.com/{TOKEN}'  # مسیر دقیق وب‌هوک
 CHANNEL_LINK = 'https://t.me/Halston_shop'
 
 bot = telebot.TeleBot(TOKEN)
@@ -65,10 +61,15 @@ class PDF(FPDF):
 # === Webhook endpoint ===
 @app.route(f'/{TOKEN}', methods=['POST'])
 def webhook():
-    json_string = request.get_data().decode('utf-8')
-    update = telebot.types.Update.de_json(json_string)
-    bot.process_new_updates([update])
-    return 'ok', 200
+    try:
+        json_str = request.get_data().decode('utf-8')
+        print(f"📩 دریافت داده: {json_str}")
+        update = telebot.types.Update.de_json(json_str)
+        bot.process_new_updates([update])
+        return 'OK', 200
+    except Exception as e:
+        print(f"❌ خطا در پردازش وب‌هوک: {e}")
+        return 'Error', 500
 
 @app.route('/', methods=['GET'])
 def index():
@@ -77,19 +78,19 @@ def index():
 # === هندلرهای ربات ===
 @bot.message_handler(commands=['start'])
 def start(msg):
-    print(f"دریافت /start از {msg.chat.id}")
     chat = msg.chat.id
     user_data[chat] = {'orders': [], 'step': 'code'}
     bot.send_message(chat,
         f'🛍 خوش آمدید به ربات فروشگاه هالستون!\n\n'
         f'برای شروع:\nلطفاً *کد محصول* را ارسال کنید.\n\n🌐 کانال ما: {CHANNEL_LINK}',
         parse_mode='Markdown')
+    print(f"✅ کاربر {chat} استارت داد.")
 
 @bot.message_handler(func=lambda m: True)
 def handle_message(m):
-    print(f"پیام از {m.chat.id}: {m.text}")
     chat = m.chat.id
     txt = m.text.strip()
+    print(f"📝 پیام از {chat}: {txt}")
     if chat not in user_data:
         return start(m)
     s = user_data[chat]['step']
@@ -148,8 +149,9 @@ def handle_message(m):
         bot.send_message(chat, f'✅ فاکتور شما ثبت شد!\n🌐 کانال ما: {CHANNEL_LINK}')
         os.remove(fn)
         user_data.pop(chat)
+        print(f"✅ فاکتور برای کاربر {chat} ارسال شد.")
 
-# === ست‌کردن وب‌هوک ===
+# === تنظیم وب‌هوک ===
 print("در حال حذف وب‌هوک قدیمی...")
 bot.remove_webhook()
 print(f"در حال ست‌کردن وب‌هوک به {WEBHOOK_URL} ...")
