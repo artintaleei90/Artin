@@ -1,8 +1,7 @@
-pytelegrambotapi
-fpdf
-Flask
-requests
+pyTelegramBotAPI
+flask
+reportlab
 arabic-reshaper
 python-bidi
-reportla
 gunicorn
+fpdf
