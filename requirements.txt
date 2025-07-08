@@ -1,7 +1,4 @@
-pyTelegramBotAPI
-Flask
-requests
-reportlab
-fpdf2
-arabic-reshaper
-python-bidi
+pyTelegramBotAPI==4.15.4
+fpdf==1.7.2
+flask==3.0.3
+requests==2.32.3
