@@ -4,13 +4,12 @@ import requests
 import zipfile
 import io
 from fpdf import FPDF
-from flask import Flask, request
+from flask import Flask
 from threading import Thread
 import time
 
 # === تنظیمات اولیه ===
 TOKEN = '7739258515:AAEUXIZ3ySZ9xp9W31l7qr__sZkbf6qcKnE'
-WEBHOOK_URL = f'https://artin-d8qn.onrender.com/{TOKEN}'
 CHANNEL_LINK = 'https://t.me/Halston_shop'
 
 bot = telebot.TeleBot(TOKEN)
@@ -67,17 +66,13 @@ class PDF(FPDF):
             self.cell(120, 8, o['code'], 1, 0, 'C')
             self.cell(40, 8, str(o['count']), 1, 1, 'C')
 
-# === Webhook endpoint ===
-@app.route(f'/{TOKEN}', methods=['POST'])
-def webhook():
-    json_str = request.get_data().decode('utf-8')
-    update = telebot.types.Update.de_json(json_str)
-    bot.process_new_updates([update])
-    return 'ok', 200
+# === keep_alive ساده برای روشن نگه داشتن سرور ===
+@app.route('/')
+def home():
+    return "🤖 ربات فروشگاه هالستون روشن است!", 200
 
-@app.route('/', methods=['GET'])
-def index():
-    return "🤖 ربات فروشگاه هالستون فعال است."
+def run_flask():
+    app.run(host="0.0.0.0", port=8080)
 
 # === هندلرهای ربات ===
 @bot.message_handler(commands=['start'])
@@ -156,42 +151,10 @@ def handle_message(m):
         bot.send_message(chat, f'✅ فاکتور شما ثبت شد!\n🌐 کانال ما: {CHANNEL_LINK}')
         user_data.pop(chat)
 
-# === keep_alive بخش ===
-keep_alive_app = Flask('')
-
-@keep_alive_app.route('/')
-def keep_alive_home():
-    return "I am alive!", 200
-
-def run_keep_alive():
-    keep_alive_app.run(host='0.0.0.0', port=8080)
-
-def keep_alive():
-    t = Thread(target=run_keep_alive)
-    t.start()
-
-    def ping():
-        while True:
-            try:
-                requests.get("http://localhost:8080/")
-            except:
-                pass
-            time.sleep(300)
-
-    Thread(target=ping).start()
-
-# === حذف وب‌هوک قبلی و ست کردن وب‌هوک جدید ===
-print("در حال حذف وب‌هوک قدیمی...")
-bot.remove_webhook()
-
-print(f"در حال ست‌کردن وب‌هوک به {WEBHOOK_URL} ...")
-bot.set_webhook(url=WEBHOOK_URL)
-
-print("وب‌هوک ست شد!")
-
-# === اجرای برنامه ===
 if __name__ == "__main__":
-    keep_alive()
-    port = int(os.environ.get('PORT', 10000))
-    print(f"سرور روی پورت {port} اجرا شد.")
-    app.run(host="0.0.0.0", port=port)
+    # اجرای Flask در یک ترد جداگانه برای keep_alive
+    Thread(target=run_flask).start()
+
+    # اجرای polling ربات
+    print("ربات شروع به کار کرد.")
+    bot.infinity_polling()
