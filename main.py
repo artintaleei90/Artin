@@ -62,8 +62,8 @@ class PDF(FPDF):
 @app.route(f'/{TOKEN}', methods=['POST'])
 def webhook():
     json_string = request.get_data().decode('utf-8')
+    print("پیام جدید دریافت شد:", json_string)  # این خط رو اضافه کن برای دیباگ
     update = telebot.types.Update.de_json(json_string)
-    print("دریافت پیام:", json_string)  # دیباگ: چاپ پیام دریافتی
     bot.process_new_updates([update])
     return 'ok', 200
 
