@@ -78,14 +78,12 @@ def index():
     return "🤖 ربات فروشگاه هالستون فعال است."
 
 # === هندلرهای ربات ===
-@bot.message_handler(commands=['start'])
-def start(msg):
-    chat = msg.chat.id
-    user_data[chat] = {'orders': [], 'step': 'code'}
-    bot.send_message(chat,
-        f'🛍 خوش آمدید به ربات فروشگاه هالستون!\n\n'
-        f'برای شروع:\nلطفاً *کد محصول* را ارسال کنید.\n\n🌐 کانال ما: {CHANNEL_LINK}',
-        parse_mode='Markdown')
+@bot.message_handler(func=lambda m: True)
+def handle_message(m):
+    chat = m.chat.id
+    bot.send_message(chat, "✅ پیام شما دریافت شد!")  # این خط رو اضافه کن برای تست
+    text = m.text.strip()
+    # ... ادامه کد قبلی
 
 @bot.message_handler(func=lambda m: True)
 def handle_message(m):
