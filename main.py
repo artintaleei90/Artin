@@ -8,7 +8,7 @@ from flask import Flask, request
 
 # === تنظیمات اولیه ===
 TOKEN = '7739258515:AAEUXIZ3ySZ9xp9W31l7qr__sZkbf6qcKnE'
-WEBHOOK_URL = f'https://artin-d8qn.onrender.com/{TOKEN}'  # آدرس وب‌هوک‌ت رو بذار
+WEBHOOK_URL = f'https://artin-d8qn.onrender.com/{TOKEN}'
 CHANNEL_LINK = 'https://t.me/Halston_shop'
 
 bot = telebot.TeleBot(TOKEN)
@@ -144,17 +144,17 @@ def handle_message(m):
         pdf.add_customer_info(d['name'], d['phone'], d['city'], d['address'])
         pdf.add_order_table(d['orders'])
 
-        filename = f'/tmp/order_{chat}.pdf'  # مسیر مناسب برای رندر
-        print("در حال ساخت PDF...")
-        pdf.output(filename)
-        print(f"PDF ساخته شد: {filename}")
+        filename = f'/tmp/order_{chat}.pdf'  # استفاده از مسیر موقت
 
-        with open(filename, 'rb') as f:
-            bot.send_document(chat, f)
+        try:
+            pdf.output(filename)
+            with open(filename, 'rb') as f:
+                bot.send_document(chat, f)
+            os.remove(filename)
+            bot.send_message(chat, f'✅ فاکتور شما ثبت شد!\n🌐 کانال ما: {CHANNEL_LINK}')
+        except Exception as e:
+            bot.send_message(chat, f'❌ خطا در ساخت یا ارسال فاکتور:\n{e}')
 
-        os.remove(filename)
-        print("فایل PDF حذف شد.")
-        bot.send_message(chat, f'✅ فاکتور شما ثبت شد!\n🌐 کانال ما: {CHANNEL_LINK}')
         user_data.pop(chat)
 
 # === حذف وب‌هوک قبلی و ست کردن وب‌هوک جدید ===
