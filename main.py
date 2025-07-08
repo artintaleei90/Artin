@@ -188,7 +188,7 @@ def create_pdf(filename, data):
 def start(msg):
     cid = msg.chat.id
     user_data[cid] = {'orders': [], 'step': 'code'}
-    bot.send_message(cid, '🛍 خوش آمدی به ربات فروشگاه هالستون! https://t.me/Halston_shop\nلطفاً کد محصول را وارد کن(به انگلیسی):')f
+    bot.send_message(cid, '🛍 خوش آمدی به ربات فروشگاه هالستون! https://t.me/Halston_shop\nلطفاً کد محصول را وارد کن(به انگلیسی):')
 
 @bot.message_handler(func=lambda m: True)
 def handle_message(msg):
