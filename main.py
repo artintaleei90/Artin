@@ -4,17 +4,14 @@ import requests
 import zipfile
 import io
 from fpdf import FPDF
-from flask import Flask, request, abort
 
 TOKEN = '7739258515:AAEUXIZ3ySZ9xp9W31l7qr__sZkbf6qcKnE'
-WEBHOOK_URL = f'https://artin-d8qn.onrender.com/{TOKEN}'
 CHANNEL_LINK = 'https://t.me/Halston_shop'
 
 bot = telebot.TeleBot(TOKEN)
-app = Flask(__name__)
 user_data = {}
 
-# فونت‌ها
+# دانلود فونت
 FONTS_ZIP_URL = 'https://github.com/rastikerdar/vazirmatn/releases/download/v33.003/vazirmatn-v33.003.zip'
 FONTS_DIR = 'fonts'
 FONT_REGULAR = os.path.join(FONTS_DIR, 'fonts', 'ttf', 'Vazirmatn-Regular.ttf')
@@ -62,20 +59,6 @@ class PDF(FPDF):
         for o in orders:
             self.cell(120, 8, o['code'], 1, 0, 'C')
             self.cell(40, 8, str(o['count']), 1, 1, 'C')
-
-@app.route(f'/{TOKEN}', methods=['POST'])
-def webhook():
-    if request.headers.get('content-type') == 'application/json':
-        json_str = request.get_data().decode('utf-8')
-        update = telebot.types.Update.de_json(json_str)
-        bot.process_new_updates([update])
-        return '', 200
-    else:
-        abort(403)
-
-@app.route('/', methods=['GET'])
-def index():
-    return '🤖 ربات فروشگاه هالستون فعال است.'
 
 @bot.message_handler(commands=['start'])
 def start_handler(message):
@@ -154,22 +137,6 @@ def message_handler(message):
         bot.send_message(chat_id, f'✅ فاکتور شما ثبت شد!\n🌐 کانال ما: {CHANNEL_LINK}')
         user_data.pop(chat_id)
 
-def set_webhook():
-    info = bot.get_webhook_info()
-    if info.url != WEBHOOK_URL:
-        print("حذف وب‌هوک قبلی...")
-        bot.remove_webhook()
-        print(f"ست کردن وب‌هوک به: {WEBHOOK_URL}")
-        success = bot.set_webhook(url=WEBHOOK_URL)
-        if success:
-            print("وب‌هوک با موفقیت ست شد.")
-        else:
-            print("خطا در ست کردن وب‌هوک!")
-    else:
-        print("وب‌هوک قبلی فعال است.")
-
-if __name__ == "__main__":
-    set_webhook()
-    port = int(os.environ.get('PORT', 10000))
-    print(f"سرور روی پورت {port} اجرا شد.")
-    app.run(host="0.0.0.0", port=port)
+if __name__ == '__main__':
+    print("ربات با روش polling اجرا شد...")
+    bot.infinity_polling()
