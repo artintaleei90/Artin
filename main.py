@@ -91,6 +91,7 @@ def start(msg):
 def handle_message(m):
     chat = m.chat.id
     text = m.text.strip()
+
     if chat not in user_data:
         start(m)
         return
@@ -146,17 +147,15 @@ def handle_message(m):
 
         filename = f'order_{chat}.pdf'
         pdf.output(filename)
-        print(f"PDF ساخته شد: {filename} با حجم {os.path.getsize(filename)} بایت")
 
         try:
             with open(filename, 'rb') as f:
                 bot.send_document(chat, f)
+            bot.send_message(chat, f'✅ فاکتور شما ثبت شد!\n🌐 کانال ما: {CHANNEL_LINK}')
         except Exception as e:
-            print(f"خطا در ارسال PDF: {e}")
-            bot.send_message(chat, "متأسفانه خطایی در ارسال فاکتور رخ داد.")
+            bot.send_message(chat, f"❌ خطا در ارسال فاکتور: {e}")
 
         os.remove(filename)
-        bot.send_message(chat, f'✅ فاکتور شما ثبت شد!\n🌐 کانال ما: {CHANNEL_LINK}')
         user_data.pop(chat)
 
 # === حذف وب‌هوک قبلی و ست کردن وب‌هوک جدید ===
