@@ -4,9 +4,8 @@ import requests
 import zipfile
 import io
 from fpdf import FPDF
-from flask import Flask, request
+from flask import Flask, request, abort
 
-# === تنظیمات اولیه ===
 TOKEN = '7739258515:AAEUXIZ3ySZ9xp9W31l7qr__sZkbf6qcKnE'
 WEBHOOK_URL = f'https://artin-d8qn.onrender.com/{TOKEN}'
 CHANNEL_LINK = 'https://t.me/Halston_shop'
@@ -15,7 +14,7 @@ bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
 user_data = {}
 
-# === دانلود و استخراج فونت فارسی ===
+# فونت‌ها
 FONTS_ZIP_URL = 'https://github.com/rastikerdar/vazirmatn/releases/download/v33.003/vazirmatn-v33.003.zip'
 FONTS_DIR = 'fonts'
 FONT_REGULAR = os.path.join(FONTS_DIR, 'fonts', 'ttf', 'Vazirmatn-Regular.ttf')
@@ -23,15 +22,14 @@ FONT_BOLD = os.path.join(FONTS_DIR, 'fonts', 'ttf', 'Vazirmatn-Bold.ttf')
 
 def download_fonts():
     if not os.path.exists(FONT_REGULAR):
-        print("📦 در حال دانلود فونت‌ها...")
+        print("در حال دانلود فونت‌ها...")
         r = requests.get(FONTS_ZIP_URL)
         z = zipfile.ZipFile(io.BytesIO(r.content))
         z.extractall(FONTS_DIR)
-        print("✅ فونت‌ها استخراج شدند.")
+        print("فونت‌ها استخراج شدند.")
 
 download_fonts()
 
-# === کلاس PDF با فونت فارسی ===
 class PDF(FPDF):
     def __init__(self):
         super().__init__()
@@ -65,110 +63,113 @@ class PDF(FPDF):
             self.cell(120, 8, o['code'], 1, 0, 'C')
             self.cell(40, 8, str(o['count']), 1, 1, 'C')
 
-# === Webhook endpoint ===
 @app.route(f'/{TOKEN}', methods=['POST'])
 def webhook():
-    json_str = request.get_data().decode('utf-8')
-    update = telebot.types.Update.de_json(json_str)
-    bot.process_new_updates([update])
-    return 'ok', 200
+    if request.headers.get('content-type') == 'application/json':
+        json_str = request.get_data().decode('utf-8')
+        update = telebot.types.Update.de_json(json_str)
+        bot.process_new_updates([update])
+        return '', 200
+    else:
+        abort(403)
 
 @app.route('/', methods=['GET'])
 def index():
-    return "🤖 ربات فروشگاه هالستون فعال است."
+    return '🤖 ربات فروشگاه هالستون فعال است.'
 
-# === هندلرهای ربات ===
 @bot.message_handler(commands=['start'])
-def start(msg):
-    chat = msg.chat.id
-    user_data[chat] = {'orders': [], 'step': 'code'}
-    bot.send_message(chat,
+def start_handler(message):
+    chat_id = message.chat.id
+    user_data[chat_id] = {'orders': [], 'step': 'code'}
+    bot.send_message(chat_id,
         f'🛍 خوش آمدید به ربات فروشگاه هالستون!\n\n'
         f'برای شروع:\nلطفاً *کد محصول* را ارسال کنید.\n\n🌐 کانال ما: {CHANNEL_LINK}',
         parse_mode='Markdown')
 
 @bot.message_handler(func=lambda m: True)
-def handle_message(m):
-    chat = m.chat.id
-    text = m.text.strip()
+def message_handler(message):
+    chat_id = message.chat.id
+    text = message.text.strip()
 
-    if chat not in user_data:
-        start(m)
+    if chat_id not in user_data:
+        start_handler(message)
         return
 
-    step = user_data[chat]['step']
+    step = user_data[chat_id]['step']
 
     if step == 'code':
-        user_data[chat]['current_code'] = text
-        user_data[chat]['step'] = 'count'
-        bot.send_message(chat, '✅ *تعداد* را وارد کن:', parse_mode='Markdown')
+        user_data[chat_id]['current_code'] = text
+        user_data[chat_id]['step'] = 'count'
+        bot.send_message(chat_id, '✅ لطفاً *تعداد* را وارد کنید:', parse_mode='Markdown')
 
     elif step == 'count':
         if not text.isdigit():
-            bot.send_message(chat, '❗ لطفاً فقط عدد وارد کن.')
+            bot.send_message(chat_id, '❗ لطفاً فقط عدد وارد کنید.')
             return
-        user_data[chat]['orders'].append({'code': user_data[chat]['current_code'], 'count': int(text)})
-        user_data[chat]['step'] = 'more'
-        bot.send_message(chat, 'محصول دیگه‌ای داری؟ (بله/خیر)')
+        user_data[chat_id]['orders'].append({'code': user_data[chat_id]['current_code'], 'count': int(text)})
+        user_data[chat_id]['step'] = 'more'
+        bot.send_message(chat_id, 'محصول دیگری دارید؟ (بله/خیر)')
 
     elif step == 'more':
         if text.lower() == 'بله':
-            user_data[chat]['step'] = 'code'
-            bot.send_message(chat, 'کد محصول بعدی را ارسال کن:')
+            user_data[chat_id]['step'] = 'code'
+            bot.send_message(chat_id, 'کد محصول بعدی را ارسال کنید:')
         elif text.lower() == 'خیر':
-            user_data[chat]['step'] = 'name'
-            bot.send_message(chat, '📝 لطفاً نام کامل را وارد کن:')
+            user_data[chat_id]['step'] = 'name'
+            bot.send_message(chat_id, '📝 لطفاً نام کامل خود را وارد کنید:')
         else:
-            bot.send_message(chat, 'لطفاً فقط *بله* یا *خیر* بنویس.', parse_mode='Markdown')
+            bot.send_message(chat_id, 'لطفاً فقط *بله* یا *خیر* بنویسید.', parse_mode='Markdown')
 
     elif step == 'name':
-        user_data[chat]['name'] = text
-        user_data[chat]['step'] = 'phone'
-        bot.send_message(chat, '📱 شماره تماس را وارد کن:')
+        user_data[chat_id]['name'] = text
+        user_data[chat_id]['step'] = 'phone'
+        bot.send_message(chat_id, '📱 شماره تماس خود را وارد کنید:')
 
     elif step == 'phone':
-        user_data[chat]['phone'] = text
-        user_data[chat]['step'] = 'city'
-        bot.send_message(chat, '🏙 نام شهر را وارد کن:')
+        user_data[chat_id]['phone'] = text
+        user_data[chat_id]['step'] = 'city'
+        bot.send_message(chat_id, '🏙 نام شهر خود را وارد کنید:')
 
     elif step == 'city':
-        user_data[chat]['city'] = text
-        user_data[chat]['step'] = 'address'
-        bot.send_message(chat, '📍 آدرس دقیق را وارد کن:')
+        user_data[chat_id]['city'] = text
+        user_data[chat_id]['step'] = 'address'
+        bot.send_message(chat_id, '📍 آدرس دقیق خود را وارد کنید:')
 
     elif step == 'address':
-        user_data[chat]['address'] = text
-        d = user_data[chat]
+        user_data[chat_id]['address'] = text
+        data = user_data[chat_id]
 
         pdf = PDF()
         pdf.add_page()
-        pdf.add_customer_info(d['name'], d['phone'], d['city'], d['address'])
-        pdf.add_order_table(d['orders'])
+        pdf.add_customer_info(data['name'], data['phone'], data['city'], data['address'])
+        pdf.add_order_table(data['orders'])
 
-        filename = f'order_{chat}.pdf'
+        filename = f'order_{chat_id}.pdf'
         pdf.output(filename)
 
-        try:
-            with open(filename, 'rb') as f:
-                bot.send_document(chat, f)
-            bot.send_message(chat, f'✅ فاکتور شما ثبت شد!\n🌐 کانال ما: {CHANNEL_LINK}')
-        except Exception as e:
-            bot.send_message(chat, f"❌ خطا در ارسال فاکتور: {e}")
+        with open(filename, 'rb') as f:
+            bot.send_document(chat_id, f)
 
         os.remove(filename)
-        user_data.pop(chat)
+        bot.send_message(chat_id, f'✅ فاکتور شما ثبت شد!\n🌐 کانال ما: {CHANNEL_LINK}')
+        user_data.pop(chat_id)
 
-# === حذف وب‌هوک قبلی و ست کردن وب‌هوک جدید ===
-print("در حال حذف وب‌هوک قدیمی...")
-bot.remove_webhook()
+def set_webhook():
+    info = bot.get_webhook_info()
+    if info.url != WEBHOOK_URL:
+        print("حذف وب‌هوک قبلی...")
+        bot.remove_webhook()
+        print(f"ست کردن وب‌هوک به: {WEBHOOK_URL}")
+        success = bot.set_webhook(url=WEBHOOK_URL)
+        if success:
+            print("وب‌هوک با موفقیت ست شد.")
+        else:
+            print("خطا در ست کردن وب‌هوک!")
+    else:
+        print("وب‌هوک قبلی فعال است.")
 
-print(f"در حال ست‌کردن وب‌هوک به {WEBHOOK_URL} ...")
-bot.set_webhook(url=WEBHOOK_URL)
-
-print("وب‌هوک ست شد!")
-
-# === اجرای برنامه ===
 if __name__ == "__main__":
+    set_webhook()
     port = int(os.environ.get('PORT', 10000))
     print(f"سرور روی پورت {port} اجرا شد.")
     app.run(host="0.0.0.0", port=port)
