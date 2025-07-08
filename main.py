@@ -33,6 +33,27 @@ keep_alive()
 bot = telebot.TeleBot(TOKEN)
 user_data = {}
 
+products = {
+    "3390": {"name": "فری سایز - پک 6 عددی رنگ: در تصویر", "price": 697},
+    "1107": {"name": "فری سایز - پک 6 عددی رنگ: سفید و مشکی", "price": 547},
+    "1303": {"name": "فری سایز - پک 4 عددی رنگ: در تصویر به جز سبز", "price": 747},
+    "3389": {"name": "فری سایز - پک 4 عددی رنگ: در تصویر (مانتو کتی)", "price": 797},
+    "1106": {"name": "فری سایز - دو طرح رنگ: در تصویر", "price": 397},
+    "1203": {"name": "فری سایز - پک 6 عددی رنگ: سفید", "price": 547},
+    "1213": {"name": "فری سایز - پک 6 عددی رنگ: در تصویر", "price": 497},
+    "3392": {"name": "فری سایز - پک 6 عددی رنگ: در تصویر (کرم و مشکی)", "price": 597},
+    "3357": {"name": "فری سایز - پک 5 عددی رنگ: در تصویر", "price": 427},
+    "1108": {"name": "فری سایز - پک 6 عددی رنگ: در تصویر", "price": 647},
+    "3346": {"name": "فری سایز - پک 6 عددی رنگ: در تصویر", "price": 597},
+    "1204": {"name": "فری سایز - پک 5 عددی رنگ: در تصویر", "price": 597},
+    "3340": {"name": "فری سایز - پک 6 عددی رنگ: در تصویر", "price": 567},
+    "1114": {"name": "فری سایز - پک 7 عددی رنگ: در تصویر (PERRY ترک)", "price": 637},
+    "1102": {"name": "فری سایز - پک 5 عددی رنگ: در تصویر", "price": 397},
+    "1301": {"name": "فری سایز - پک 4 عددی رنگ: در تصویر", "price": 597},
+    "3377": {"name": "فری سایز - پک 6 عددی رنگ: در تصویر", "price": 597},
+    "3759": {"name": "فری سایز - پک 6 عددی رنگ: در تصویر", "price": 347},
+}
+
 # ثبت فونت فارسی (مطمئن شو فایل فونت تو مسیر هست)
 FONT_PATH = "Vazirmatn-Regular.ttf"
 if not os.path.exists(FONT_PATH):
@@ -76,27 +97,51 @@ def create_pdf(filename, data):
         c.save()
         return
 
-    table_data = [[reshape_text("کد محصول"), reshape_text("تعداد")]]
+    table_data = [
+        [
+            reshape_text("کد محصول"),
+            reshape_text("نام محصول"),
+            reshape_text("تعداد"),
+            reshape_text("قیمت واحد"),
+            reshape_text("مبلغ کل")
+        ]
+    ]
+    total_price = 0
     for order in orders:
-        table_data.append([reshape_text(order.get('code', '')), reshape_text(str(order.get('count', '')))])
+        code = order.get('code', '')
+        name = order.get('name', '')
+        count = order.get('count', 0)
+        price = order.get('price', 0)
+        sum_price = count * price
+        total_price += sum_price
+        table_data.append([
+            reshape_text(code),
+            reshape_text(name),
+            reshape_text(str(count)),
+            reshape_text(str(price)),
+            reshape_text(str(sum_price))
+        ])
 
-    table = Table(table_data, colWidths=[10*cm, 4*cm])
+    table = Table(table_data, colWidths=[3*cm, 7*cm, 2*cm, 3*cm, 3*cm])
 
     style = TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('FONTNAME', (0, 0), (-1, -1), 'Vazir'),
-        ('FONTSIZE', (0, 0), (-1, -1), 12),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
     ])
     table.setStyle(style)
 
-    # رسم جدول روی canvas
     table.wrapOn(c, width, height)
     table_height = table._height
     table.drawOn(c, 2*cm, y - table_height)
+
+    y = y - table_height - 1*cm
+    c.setFont("Vazir", 12)
+    c.drawRightString(width - 2*cm, y, reshape_text(f"جمع کل سفارش: {total_price} تومان"))
 
     c.showPage()
     c.save()
@@ -105,7 +150,7 @@ def create_pdf(filename, data):
 def start(msg):
     cid = msg.chat.id
     user_data[cid] = {'orders': [], 'step': 'code'}
-    bot.send_message(cid, '🛍 خوش آمدی به ربات فروشگاه هالستون!https://t.me/Halston_shop\nلطفاً کد محصول را وارد کن:')
+    bot.send_message(cid, '🛍 خوش آمدی به ربات فروشگاه هالستون! https://t.me/Halston_shop\nلطفاً کد محصول را وارد کن:')
 
 @bot.message_handler(func=lambda m: True)
 def handle_message(msg):
@@ -119,9 +164,15 @@ def handle_message(msg):
 
     try:
         if step == 'code':
+            if text not in products:
+                bot.send_message(cid, '❌ کد محصول وارد شده موجود نیست. لطفا کد صحیح را وارد کن.')
+                return
+            product_info = products[text]
             user_data[cid]['current_code'] = text
+            user_data[cid]['current_name'] = product_info['name']
+            user_data[cid]['current_price'] = product_info['price']
             user_data[cid]['step'] = 'count'
-            bot.send_message(cid, '📦 تعداد این محصول را وارد کن:')
+            bot.send_message(cid, f"محصول انتخاب شده:\n{product_info['name']}\nقیمت واحد: {product_info['price']} تومان\n\nلطفاً تعداد را وارد کن:")
 
         elif step == 'count':
             if not text.isdigit():
@@ -129,11 +180,18 @@ def handle_message(msg):
                 return
             count = int(text)
             code = user_data[cid].get('current_code')
+            name = user_data[cid].get('current_name')
+            price = user_data[cid].get('current_price')
             if code is None:
                 bot.send_message(cid, '❌ خطا: کد محصول ثبت نشده است. لطفا دوباره کد را وارد کن.')
                 user_data[cid]['step'] = 'code'
                 return
-            user_data[cid]['orders'].append({'code': code, 'count': count})
+            user_data[cid]['orders'].append({
+                'code': code,
+                'name': name,
+                'price': price,
+                'count': count
+            })
             user_data[cid]['step'] = 'more'
             bot.send_message(cid, 'محصول دیگری هم داری؟ (بله / خیر)')
 
