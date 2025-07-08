@@ -7,7 +7,6 @@ from fpdf import FPDF
 from flask import Flask
 from threading import Thread
 
-# آدرس فایل زیپ فونت وزیر
 FONTS_ZIP_URL = 'https://github.com/artintaleei90/Artin/raw/main/vazirmatn-v33.003.zip'
 FONTS_DIR = 'fonts'
 
@@ -21,64 +20,56 @@ def download_and_extract_fonts():
                 zip_ref.extractall(FONTS_DIR)
             print("✅ فونت‌ها با موفقیت استخراج شدند.")
         else:
-            print("❌ دانلود فونت‌ها موفق نبود.")
+            print("❌ دانلود فونت‌ها با مشکل مواجه شد.")
     else:
-        print("✅ فونت‌ها قبلا دانلود و استخراج شده‌اند.")
+        print("✅ پوشه فونت‌ها وجود دارد، دانلود رد شد.")
+
+def list_files(startpath):
+    for root, dirs, files in os.walk(startpath):
+        level = root.replace(startpath, '').count(os.sep)
+        indent = ' ' * 4 * level
+        print(f'{indent}{os.path.basename(root)}/')
+        subindent = ' ' * 4 * (level + 1)
+        for f in files:
+            print(f'{subindent}{f}')
 
 download_and_extract_fonts()
-
-# مسیر دقیق فونت‌ها (توی پوشه استخراج شده)
-FONT_REGULAR_PATH = os.path.join(FONTS_DIR, 'fonts', 'ttf', 'Vazirmatn-Regular.ttf')
-FONT_BOLD_PATH = os.path.join(FONTS_DIR, 'fonts', 'ttf', 'Vazirmatn-Bold.ttf')
-
-# اگر فونت‌ها توی مسیر بالا نبودن، بررسی کن مسیر درست رو پیدا کن
-if not os.path.exists(FONT_REGULAR_PATH) or not os.path.exists(FONT_BOLD_PATH):
-    print("❌ فونت‌ها پیدا نشدند! لطفا مسیر فونت‌ها را چک کن.")
-    # می‌تونی اینجا مسیر دقیق‌تر یا متفاوت رو تنظیم کنی
+print("ساختار فایل‌های فونت:")
+list_files(FONTS_DIR)
 
 class PDF(FPDF):
     def header(self):
-        self.add_font('Vazir', '', FONT_REGULAR_PATH, uni=True)
-        self.add_font('Vazir', 'B', FONT_BOLD_PATH, uni=True)
-        self.set_font('Vazir', 'B', 16)
+        self.add_font('Vazir', '', f'{FONTS_DIR}/Round-Dots/misc/Non-Latin/fonts/ttf/Vazirmatn-RD-NL-Regular.ttf', uni=True)
+        self.set_font('Vazir', '', 14)
         self.cell(0, 10, 'فاکتور سفارش', 0, 1, 'C')
         self.ln(5)
 
     def footer(self):
         self.set_y(-15)
-        self.set_font('Vazir', '', 10)
+        self.set_font('Vazir', '', 8)
         self.cell(0, 10, 'مرکز پوشاک هالستون', 0, 0, 'C')
 
     def add_customer_info(self, name, phone, city, address):
         self.set_font('Vazir', '', 12)
-        self.cell(0, 8, f'نام مشتری: {name}', 0, 1, 'R')
-        self.cell(0, 8, f'شماره تماس: {phone}', 0, 1, 'R')
-        self.cell(0, 8, f'شهر: {city}', 0, 1, 'R')
-        self.multi_cell(0, 8, f'آدرس: {address}', 0, 1, 'R')
+        self.cell(0, 10, f'نام مشتری: {name}', 0, 1, 'R')
+        self.cell(0, 10, f'شماره تماس: {phone}', 0, 1, 'R')
+        self.cell(0, 10, f'شهر: {city}', 0, 1, 'R')
+        self.multi_cell(0, 10, f'آدرس: {address}', 0, 1, 'R')
         self.ln(5)
 
     def add_order_table(self, orders):
-        self.set_font('Vazir', 'B', 14)
+        self.set_font('Vazir', '', 12)
         self.cell(80, 10, 'کد محصول', 1, 0, 'C')
         self.cell(40, 10, 'تعداد', 1, 1, 'C')
-
-        self.set_font('Vazir', '', 12)
         for item in orders:
             self.cell(80, 10, item['code'], 1, 0, 'C')
             self.cell(40, 10, str(item['count']), 1, 1, 'C')
-
-# --- بخش ربات تلگرام ---
-
-TOKEN = '7739258515:AAEUXIZ3ySZ9xp9W31l7qr__sZkbf6qcKnE'
-
-bot = telebot.TeleBot(TOKEN)
-user_data = {}
 
 app = Flask('')
 
 @app.route('/')
 def home():
-    return "ربات فروشگاه هالستون روشن است!"
+    return "ربات هالستون داره کار میکنه..."
 
 def run():
     app.run(host='0.0.0.0', port=8080)
@@ -86,15 +77,19 @@ def run():
 def keep_alive():
     Thread(target=run).start()
 
+TOKEN = '7739258515:AAEUXIZ3ySZ9xp9W31l7qr__sZkbf6qcKnE'
+bot = telebot.TeleBot(TOKEN)
+user_data = {}
+
 keep_alive()
 
 @bot.message_handler(commands=['start'])
 def start(message):
     chat_id = message.chat.id
     user_data[chat_id] = {'orders': [], 'step': 'code'}
-    bot.send_message(chat_id, '🛍 خوش آمدی به ربات فروشگاه هالستون!\nلینک کانال ما:\nhttps://t.me/Halston_shop\n\nلطفا کد محصول را وارد کن:')
+    bot.send_message(chat_id, '🛍 خوش آمدی به ربات فروشگاه هالستون!\nلینک گروه ما: https://t.me/Halston_shop\nلطفا کد محصول را وارد کن:')
 
-@bot.message_handler(func=lambda m: True)
+@bot.message_handler(func=lambda message: True)
 def handle_message(message):
     chat_id = message.chat.id
     text = message.text.strip()
@@ -164,5 +159,5 @@ def handle_message(message):
         os.remove(filename)
         user_data.pop(chat_id)
 
-bot.remove_webhook()
+bot.remove_webhook()  # حذف webhook برای جلوگیری از خطای 409
 bot.infinity_polling()
