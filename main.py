@@ -1,14 +1,10 @@
-import os
-import telebot
-import requests
-import zipfile
-import io
+import os, telebot, requests, zipfile, io
 from fpdf import FPDF
 from flask import Flask, request
 
 # === تنظیمات اولیه ===
 TOKEN = '7739258515:AAEUXIZ3ySZ9xp9W31l7qr__sZkbf6qcKnE'
-WEBHOOK_URL = f'https://artin-um4v.onrender.com/{TOKEN}'  # آدرس وب‌هوک به همراه توکن
+WEBHOOK_URL = 'https://artin-um4v.onrender.com/' + TOKEN  # آدرس کامل دامنه + توکن
 CHANNEL_LINK = 'https://t.me/Halston_shop'
 
 bot = telebot.TeleBot(TOKEN)
@@ -62,9 +58,10 @@ class PDF(FPDF):
             self.cell(120, 8, o['code'], 1, 0, 'C')
             self.cell(40, 8, str(o['count']), 1, 1, 'C')
 
-# === Webhook endpoint ===
-@app.route(f'/{TOKEN}', methods=['POST'])
+# === Webhook endpoint با لاگ اضافه شده ===
+@app.route('/', methods=['POST'])
 def webhook():
+    print("Webhook received!")  # لاگ می‌زند وقتی درخواست می‌رسد
     update = telebot.types.Update.de_json(request.stream.read().decode("utf-8"))
     bot.process_new_updates([update])
     return 'ok', 200
@@ -146,7 +143,7 @@ def handle_message(m):
         os.remove(fn)
         user_data.pop(chat)
 
-# === تنظیم وب‌هوک ===
+# === ست‌کردن وب‌هوک ===
 bot.remove_webhook()
 bot.set_webhook(url=WEBHOOK_URL)
 
