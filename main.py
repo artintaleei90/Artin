@@ -1,8 +1,12 @@
-import os, telebot, requests, zipfile, io
+import os
+import telebot
+import requests
+import zipfile
+import io
 from fpdf import FPDF
 from flask import Flask, request
 
-# === تنظیمات اولیه ===
+# تنظیمات
 TOKEN = '7739258515:AAEUXIZ3ySZ9xp9W31l7qr__sZkbf6qcKnE'
 WEBHOOK_URL = f'https://artin-um4v.onrender.com/{TOKEN}'
 CHANNEL_LINK = 'https://t.me/Halston_shop'
@@ -11,7 +15,7 @@ bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
 user_data = {}
 
-# === دانلود و استخراج فونت فارسی ===
+# دانلود و استخراج فونت
 FONTS_ZIP_URL = 'https://github.com/rastikerdar/vazirmatn/releases/download/v33.003/vazirmatn-v33.003.zip'
 FONTS_DIR = 'fonts'
 FONT_REGULAR = os.path.join(FONTS_DIR, 'fonts', 'ttf', 'Vazirmatn-Regular.ttf')
@@ -27,7 +31,7 @@ def download_fonts():
 
 download_fonts()
 
-# === کلاس ساخت PDF ===
+# کلاس PDF با فونت فارسی
 class PDF(FPDF):
     def header(self):
         self.add_font('Vazir', '', FONT_REGULAR, uni=True)
@@ -58,20 +62,20 @@ class PDF(FPDF):
             self.cell(120, 8, o['code'], 1, 0, 'C')
             self.cell(40, 8, str(o['count']), 1, 1, 'C')
 
-# === Webhook endpoint ===
+# وب‌هوک (با چاپ لاگ برای دیباگ)
 @app.route(f'/{TOKEN}', methods=['POST'])
 def webhook():
     json_string = request.get_data().decode('utf-8')
-    print("پیام جدید دریافت شد:", json_string)  # این خط رو اضافه کن برای دیباگ
+    print("Update received:", json_string)  # اینجا پیام رو چاپ می‌کنیم برای اطمینان
     update = telebot.types.Update.de_json(json_string)
     bot.process_new_updates([update])
-    return 'ok', 200
+    return "OK", 200
 
 @app.route('/', methods=['GET'])
 def index():
     return "🤖 ربات فعال است."
 
-# === هندلرهای ربات ===
+# هندلرها
 @bot.message_handler(commands=['start'])
 def start(msg):
     chat = msg.chat.id
@@ -83,7 +87,6 @@ def start(msg):
 
 @bot.message_handler(func=lambda m: True)
 def handle_message(m):
-    print(f"پیام رسید: {m.text} از کاربر {m.chat.id}")  # دیباگ: چاپ متن پیام و آی‌دی کاربر
     chat = m.chat.id
     txt = m.text.strip()
     if chat not in user_data:
@@ -145,15 +148,19 @@ def handle_message(m):
         os.remove(fn)
         user_data.pop(chat)
 
-# === حذف وب‌هوک قدیمی و ست‌کردن وب‌هوک جدید ===
+# حذف وب‌هوک قبلی و ست‌کردن وب‌هوک جدید
 print("در حال حذف وب‌هوک قدیمی...")
 bot.remove_webhook()
-print(f"در حال ست‌کردن وب‌هوک به {WEBHOOK_URL} ...")
-bot.set_webhook(url=WEBHOOK_URL)
-print("وب‌هوک ست شد!")
 
-# === اجرای اپلیکیشن ===
+print(f"در حال ست‌کردن وب‌هوک به {WEBHOOK_URL} ...")
+set_result = bot.set_webhook(url=WEBHOOK_URL)
+if set_result:
+    print("وب‌هوک ست شد!")
+else:
+    print("خطا در ست‌کردن وب‌هوک!")
+
+# اجرای اپلیکیشن
 if __name__ == "__main__":
-    port = int(os.environ.get('PORT', 10000))  # پورت رندر: 10000
+    port = int(os.environ.get('PORT', 8080))
     print(f"سرور روی پورت {port} اجرا شد.")
     app.run(host="0.0.0.0", port=port)
