@@ -1,33 +1,39 @@
-import os, telebot, requests, zipfile, io
+import os
+import telebot
+import requests
+import zipfile
+import io
 from fpdf import FPDF
 from flask import Flask, request
 
-# === تنظیمات اولیه ===
+# تنظیمات اولیه
 TOKEN = '7739258515:AAEUXIZ3ySZ9xp9W31l7qr__sZkbf6qcKnE'
-WEBHOOK_URL = 'https://artin-um4v.onrender.com/' + TOKEN  # آدرس کامل دامنه + توکن
+WEBHOOK_URL = f'https://artin-um4v.onrender.com/{TOKEN}'
 CHANNEL_LINK = 'https://t.me/Halston_shop'
 
 bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
 user_data = {}
 
-# === دانلود و استخراج فونت فارسی ===
+# دانلود و استخراج فونت فارسی اگر وجود نداشت
 FONTS_ZIP_URL = 'https://github.com/rastikerdar/vazirmatn/releases/download/v33.003/vazirmatn-v33.003.zip'
 FONTS_DIR = 'fonts'
 FONT_REGULAR = os.path.join(FONTS_DIR, 'fonts', 'ttf', 'Vazirmatn-Regular.ttf')
 FONT_BOLD = os.path.join(FONTS_DIR, 'fonts', 'ttf', 'Vazirmatn-Bold.ttf')
 
 def download_fonts():
-    if not os.path.exists(FONT_REGULAR):
+    if not os.path.isfile(FONT_REGULAR) or not os.path.isfile(FONT_BOLD):
         print("📦 در حال دانلود فونت...")
         r = requests.get(FONTS_ZIP_URL)
         z = zipfile.ZipFile(io.BytesIO(r.content))
         z.extractall(FONTS_DIR)
         print("✅ فونت استخراج شد.")
+    else:
+        print("✅ فونت‌ها قبلاً دانلود شده‌اند.")
 
 download_fonts()
 
-# === کلاس ساخت PDF ===
+# کلاس ساخت PDF با فونت فارسی
 class PDF(FPDF):
     def header(self):
         self.add_font('Vazir', '', FONT_REGULAR, uni=True)
@@ -58,19 +64,20 @@ class PDF(FPDF):
             self.cell(120, 8, o['code'], 1, 0, 'C')
             self.cell(40, 8, str(o['count']), 1, 1, 'C')
 
-# === Webhook endpoint با لاگ اضافه شده ===
-@app.route('/', methods=['POST'])
+# هندلر وب‌هوک تلگرام روی مسیر توکن
+@app.route(f'/{TOKEN}', methods=['POST'])
 def webhook():
-    print("Webhook received!")  # لاگ می‌زند وقتی درخواست می‌رسد
-    update = telebot.types.Update.de_json(request.stream.read().decode("utf-8"))
+    json_str = request.get_data().decode('utf-8')
+    update = telebot.types.Update.de_json(json_str)
     bot.process_new_updates([update])
     return 'ok', 200
 
+# صفحه اصلی فقط تست سلامت سرور
 @app.route('/', methods=['GET'])
 def index():
-    return "🤖 ربات فعال است."
+    return "🤖 ربات فروشگاه هالستون فعال است."
 
-# === هندلرهای ربات ===
+# هندلرهای تلگرام
 @bot.message_handler(commands=['start'])
 def start(msg):
     chat = msg.chat.id
@@ -86,21 +93,21 @@ def handle_message(m):
     txt = m.text.strip()
     if chat not in user_data:
         return start(m)
-    s = user_data[chat]['step']
+    step = user_data[chat]['step']
 
-    if s == 'code':
+    if step == 'code':
         user_data[chat]['current_code'] = txt
         user_data[chat]['step'] = 'count'
         bot.send_message(chat, '✅ *تعداد* را وارد کن:', parse_mode='Markdown')
 
-    elif s == 'count':
+    elif step == 'count':
         if not txt.isdigit():
             return bot.send_message(chat, '❗ لطفاً فقط عدد وارد کن.')
         user_data[chat]['orders'].append({'code': user_data[chat]['current_code'], 'count': int(txt)})
         user_data[chat]['step'] = 'more'
         bot.send_message(chat, 'محصول دیگه‌ای داری؟ (بله/خیر)')
 
-    elif s == 'more':
+    elif step == 'more':
         if txt.lower() == 'بله':
             user_data[chat]['step'] = 'code'
             bot.send_message(chat, 'کد محصول بعدی را ارسال کن:')
@@ -110,22 +117,22 @@ def handle_message(m):
         else:
             bot.send_message(chat, 'لطفاً فقط *بله* یا *خیر* بنویس.', parse_mode='Markdown')
 
-    elif s == 'name':
+    elif step == 'name':
         user_data[chat]['name'] = txt
         user_data[chat]['step'] = 'phone'
         bot.send_message(chat, '📱 شماره تماس را وارد کن:')
 
-    elif s == 'phone':
+    elif step == 'phone':
         user_data[chat]['phone'] = txt
         user_data[chat]['step'] = 'city'
         bot.send_message(chat, '🏙 نام شهر را وارد کن:')
 
-    elif s == 'city':
+    elif step == 'city':
         user_data[chat]['city'] = txt
         user_data[chat]['step'] = 'address'
         bot.send_message(chat, '📍 آدرس دقیق را وارد کن:')
 
-    elif s == 'address':
+    elif step == 'address':
         user_data[chat]['address'] = txt
         d = user_data[chat]
 
@@ -143,10 +150,11 @@ def handle_message(m):
         os.remove(fn)
         user_data.pop(chat)
 
-# === ست‌کردن وب‌هوک ===
+# پاک کردن وب‌هوک قبلی و ست کردن وب‌هوک جدید
 bot.remove_webhook()
 bot.set_webhook(url=WEBHOOK_URL)
 
-# === اجرای اپلیکیشن ===
+# اجرای اپلیکیشن
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get('PORT', 8080)))
+    port = int(os.environ.get('PORT', 8080))
+    app.run(host="0.0.0.0", port=port)
