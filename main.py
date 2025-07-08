@@ -1,20 +1,33 @@
+import os
+from flask import Flask, send_file
 from fpdf import FPDF
-import arabic_reshaper
-from bidi.algorithm import get_display
 
-pdf = FPDF()
-pdf.add_page()
+app = Flask(__name__)
 
-# اضافه کردن فونت فارسی (مسیر فونت رو درست وارد کن)
-pdf.add_font('Vazir', '', 'fonts/Vazirmatn-Regular.ttf', uni=True)
-pdf.set_font('Vazir', '', 14)
+@app.route('/')
+def generate_pdf():
+    # ساخت PDF
+    pdf = FPDF()
+    pdf.add_page()
 
-# متن فارسی اصلی
-text = "سلام سلطان عزیز! این یک متن تستی است."
+    # افزودن فونت
+    font_path = 'fonts/Vazirmatn-RD-NL-Regular.ttf'
+    if not os.path.exists(font_path):
+        return '❌ فونت پیدا نشد: ' + font_path
 
-# شکل‌دهی و راست به چپ کردن متن
-reshaped_text = arabic_reshaper.reshape(text)
-bidi_text = get_display(reshaped_text)
+    pdf.add_font('Vazir', '', font_path, uni=True)
+    pdf.set_font('Vazir', '', 14)
 
-pdf.cell(0, 10, bidi_text)
-pdf.output("output.pdf")
+    # متن فارسی نمونه
+    text = "🧾 فاکتور نمونه\nنام محصول: مانتو تابستانی\nقیمت: ۳۲۰٬۰۰۰ تومان\nتعداد: ۲ عدد\nمبلغ کل: ۶۴۰٬۰۰۰ تومان"
+
+    # نوشتن از راست به چپ با معکوس کردن رشته‌ها
+    for line in text.split('\n'):
+        pdf.cell(0, 10, txt=line[::-1], ln=True, align='R')
+
+    # ذخیره PDF
+    pdf.output("sample.pdf")
+    return send_file("sample.pdf", mimetype='application/pdf')
+
+if __name__ == '__main__':
+    app.run(host="0.0.0.0", port=8080)
