@@ -1,105 +1,35 @@
-<!-- webapp/index.html -->
 <!DOCTYPE html>
-<html lang="fa">
+<html lang="fa" dir="rtl">
 <head>
   <meta charset="UTF-8">
   <title>فروشگاه هالستون</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <style>
-    body {
-      font-family: sans-serif;
-      direction: rtl;
-      background: #f4f4f4;
-      padding: 20px;
-    }
-    .product {
-      background: white;
-      padding: 10px;
-      margin-bottom: 20px;
-      border-radius: 10px;
-      border: 1px solid #ddd;
-    }
-    .product img {
-      width: 100%;
-      border-radius: 10px;
-    }
-    .product-title {
-      font-weight: bold;
-      margin: 10px 0;
-    }
-    input, button {
-      width: 100%;
-      margin-top: 10px;
-      padding: 10px;
-      font-size: 16px;
-    }
-    button {
-      background: #0088cc;
-      color: white;
-      border: none;
-      border-radius: 5px;
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <header>
+    <h1>فروشگاه هالستون</h1>
+    <button id="cart-button">🛒 سبد خرید <span id="cart-count">0</span></button>
+  </header>
 
-  <h2>🛍 فروشگاه هالستون</h2>
+  <main id="product-list"></main>
 
-  <div class="product">
-    <img src="https://halston.ir/uploads/1303.jpg" alt="مانتو کرم">
-    <div class="product-title">1303 - مانتو کرم</div>
-    <div>قیمت: 747,000 تومان</div>
-    <label>تعداد:</label>
-    <input type="number" id="count-1303" min="0" value="0">
+  <div id="cart-modal" class="modal hidden">
+    <div class="modal-content">
+      <span class="close-button" id="close-cart">&times;</span>
+      <h2>سبد خرید</h2>
+      <ul id="cart-items"></ul>
+
+      <h3>اطلاعات مشتری</h3>
+      <input type="text" id="name" placeholder="نام">
+      <input type="text" id="phone" placeholder="شماره تماس">
+      <input type="text" id="city" placeholder="شهر">
+      <textarea id="address" placeholder="آدرس کامل"></textarea>
+
+      <button id="submit-order">🧾 ثبت سفارش</button>
+    </div>
   </div>
 
-  <div class="product">
-    <img src="https://halston.ir/uploads/3390.jpg" alt="مانتو مشکی">
-    <div class="product-title">3390 - مانتو مشکی</div>
-    <div>قیمت: 697,000 تومان</div>
-    <label>تعداد:</label>
-    <input type="number" id="count-3390" min="0" value="0">
-  </div>
-
-  <h3>📝 مشخصات شما</h3>
-  <input type="text" id="name" placeholder="نام کامل">
-  <input type="text" id="phone" placeholder="شماره تماس">
-  <input type="text" id="city" placeholder="شهر">
-  <input type="text" id="address" placeholder="آدرس">
-
-  <button onclick="submitOrder()">ثبت سفارش</button>
-
-  <script>
-    const tg = window.Telegram.WebApp;
-    tg.expand();
-
-    const products = {
-      "1303": { name: "مانتو کرم - پک ۴ عددی", price: 747000 },
-      "3390": { name: "مانتو مشکی - پک ۶ عددی", price: 697000 }
-    };
-
-    function submitOrder() {
-      const orders = [];
-
-      for (const code in products) {
-        const count = parseInt(document.getElementById(`count-${code}`).value);
-        if (count > 0) {
-          orders.push({ code, ...products[code], count });
-        }
-      }
-
-      const name = document.getElementById("name").value.trim();
-      const phone = document.getElementById("phone").value.trim();
-      const city = document.getElementById("city").value.trim();
-      const address = document.getElementById("address").value.trim();
-
-      if (!orders.length || !name || !phone || !city || !address) {
-        alert("تمام فیلدها را پر کنید و حداقل یک محصول انتخاب کنید.");
-        return;
-      }
-
-      tg.sendData(JSON.stringify({ name, phone, city, address, orders }));
-    }
-  </script>
+  <script src="script.js"></script>
 </body>
 </html>
