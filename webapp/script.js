@@ -71,30 +71,33 @@ function renderCart() {
 }
 
 document.getElementById('submit-order').onclick = async () => {
-  const name = document.getElementById('name').value;
-  const phone = document.getElementById('phone').value;
-  const city = document.getElementById('city').value;
-  const address = document.getElementById('address').value;
+  const name = document.getElementById('name').value.trim();
+  const phone = document.getElementById('phone').value.trim();
+  const city = document.getElementById('city').value.trim();
+  const address = document.getElementById('address').value.trim();
 
   if (!name || !phone || !city || !address || cart.length === 0) {
     alert("لطفاً تمام فیلدها را پر کنید و حداقل یک محصول انتخاب کنید.");
     return;
   }
 
-  const initData = Telegram.WebApp.initDataUnsafe;
-  const chat_id = initData && initData.user ? initData.user.id : null;
+  // گرفتن chat_id از تلگرام وب اپ
+  let chat_id = null;
+  if (window.Telegram && Telegram.WebApp && Telegram.WebApp.initDataUnsafe) {
+    chat_id = Telegram.WebApp.initDataUnsafe.user.id;
+  }
 
   if (!chat_id) {
-    alert("chat_id کاربر قابل دریافت نیست.");
+    alert("خطا در دریافت شناسه کاربر تلگرام. لطفا ربات را از طریق تلگرام باز کنید.");
     return;
   }
 
   const data = {
+    chat_id,
     name,
     phone,
     city,
     address,
-    chat_id,
     orders: cart.map(i => ({
       code: i.code,
       name: i.name,
@@ -104,17 +107,18 @@ document.getElementById('submit-order').onclick = async () => {
   };
 
   try {
-    await fetch('/webapp/order', {
+    const res = await fetch('/webapp/order', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
-
+    if (!res.ok) throw new Error("خطا در ارسال سفارش");
     alert("سفارش شما با موفقیت ثبت شد ✅");
+    cart.length = 0;
+    updateCartCount();
     document.getElementById('cart-modal').classList.add('hidden');
-    Telegram.WebApp.close(); // بستن وب‌اپ بعد از سفارش
   } catch (err) {
-    alert("خطا در ارسال سفارش ❌");
+    alert("خطایی در ارسال سفارش رخ داد: " + err.message);
   }
 };
 
