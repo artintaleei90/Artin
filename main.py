@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, redirect, send_from_directory
+from flask import Flask, request, redirect, send_from_directory, jsonify
 import telebot
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase.ttfonts import TTFont
@@ -10,29 +10,19 @@ from reportlab.platypus import Table, TableStyle
 from reportlab.lib import colors
 import arabic_reshaper
 from bidi.algorithm import get_display
+from telebot.types import WebAppInfo, KeyboardButton, ReplyKeyboardMarkup
 
 TOKEN = '7739258515:AAEUXIZ3ySZ9xp9W31l7qr__sZkbf6qcKnE'
 WEBHOOK_URL = 'https://artin-oqaq.onrender.com/webhook'
 
 app = Flask(__name__)
 bot = telebot.TeleBot(TOKEN)
-
-# محصولات نمونه (کوتاه کردم برای مثال)
-products = {
-    "3390": {"name": "فری سایز - پک 6 عددی رنگ: در تصویر", "price": 697000},
-    "1107": {"name": "فری سایز - پک 6 عددی رنگ: سفید و مشکی", "price": 547000},
-    # ... بقیه محصولات اینجا ...
-}
-
-user_data = {}
-
 FONT_PATH = "Vazirmatn-Regular.ttf"
 pdfmetrics.registerFont(TTFont('Vazir', FONT_PATH))
 
 def reshape_text(text):
     reshaped = arabic_reshaper.reshape(text)
-    bidi_text = get_display(reshaped)
-    return bidi_text
+    return get_display(reshaped)
 
 def create_pdf(filename, data):
     c = canvas.Canvas(filename, pagesize=A4)
@@ -53,7 +43,6 @@ def create_pdf(filename, data):
         y -= 1*cm
 
     y -= 0.5*cm
-
     orders = data.get('orders', [])
     if not orders:
         c.drawString(2*cm, y, reshape_text("هیچ محصولی ثبت نشده است."))
@@ -85,9 +74,6 @@ def create_pdf(filename, data):
             reshape_text(str(sum_price))
         ])
 
-    from reportlab.platypus import Table, TableStyle
-    from reportlab.lib import colors
-
     table = Table(table_data, colWidths=[3*cm, 7*cm, 2*cm, 3*cm, 3*cm])
     style = TableStyle([
         ('BACKGROUND', (0,0), (-1,0), colors.lightgrey),
@@ -102,10 +88,9 @@ def create_pdf(filename, data):
     table.wrapOn(c, width, height)
     table_height = table._height
     table.drawOn(c, 2*cm, y - table_height)
-
     y = y - table_height - 1*cm
-    c.drawRightString(width - 2*cm, y, reshape_text(f"جمع کل سفارش: {total} تومان"))
 
+    c.drawRightString(width - 2*cm, y, reshape_text(f"جمع کل سفارش: {total} تومان"))
     c.showPage()
     c.save()
 
@@ -117,6 +102,24 @@ def home():
 def send_webapp(path):
     return send_from_directory('webapp', path)
 
+@app.route('/webapp/order', methods=['POST'])
+def handle_webapp_order():
+    data = request.get_json()
+    phone = data.get('phone')
+    if not data.get('orders'):
+        return jsonify({'status': 'error', 'message': 'سبد خرید خالی است'}), 400
+
+    filename = f"order_{phone}.pdf"
+    create_pdf(filename, data)
+
+    try:
+        with open(filename, 'rb') as f:
+            bot.send_document(chat_id='@Halston_shop', document=f)
+        return jsonify({'status': 'success'})
+    finally:
+        if os.path.exists(filename):
+            os.remove(filename)
+
 @app.route('/webhook', methods=['POST'])
 def webhook():
     json_str = request.get_data().decode('utf-8')
@@ -126,85 +129,9 @@ def webhook():
 
 @bot.message_handler(commands=['start'])
 def start(msg):
-    cid = msg.chat.id
-    user_data[cid] = {'orders': [], 'step': 'code'}
-    bot.send_message(cid, '🛍 خوش آمدی به ربات فروشگاه هالستون! لطفا کد محصول را وارد کن:')
-
-@bot.message_handler(func=lambda m: True)
-def handle_message(msg):
-    cid = msg.chat.id
-    text = msg.text.strip()
-    if cid not in user_data:
-        user_data[cid] = {'orders': [], 'step': 'code'}
-    step = user_data[cid].get('step', 'code')
-
-    try:
-        if step == 'code':
-            if text not in products:
-                bot.send_message(cid, '❌ کد محصول موجود نیست، دوباره وارد کن.')
-                return
-            prod = products[text]
-            user_data[cid]['current_code'] = text
-            user_data[cid]['current_name'] = prod['name']
-            user_data[cid]['current_price'] = prod['price']
-            user_data[cid]['step'] = 'count'
-            bot.send_message(cid, f"محصول: {prod['name']}\nقیمت: {prod['price']} تومان\nتعداد را وارد کن:")
-
-        elif step == 'count':
-            if not text.isdigit():
-                bot.send_message(cid, '❌ لطفا فقط عدد وارد کن.')
-                return
-            count = int(text)
-            user_data[cid]['orders'].append({
-                'code': user_data[cid]['current_code'],
-                'name': user_data[cid]['current_name'],
-                'price': user_data[cid]['current_price'],
-                'count': count
-            })
-            user_data[cid]['step'] = 'more'
-            bot.send_message(cid, 'محصول دیگری داری؟ (بله / خیر)')
-
-        elif step == 'more':
-            if text == 'بله':
-                user_data[cid]['step'] = 'code'
-                bot.send_message(cid, 'کد محصول بعدی را وارد کن:')
-            elif text == 'خیر':
-                if not user_data[cid]['orders']:
-                    bot.send_message(cid, '❌ شما هیچ محصولی انتخاب نکردید.')
-                    user_data[cid]['step'] = 'code'
-                    return
-                user_data[cid]['step'] = 'name'
-                bot.send_message(cid, 'نام کامل خود را وارد کن:')
-            else:
-                bot.send_message(cid, 'لطفا فقط "بله" یا "خیر" بنویس.')
-
-        elif step == 'name':
-            user_data[cid]['name'] = text
-            user_data[cid]['step'] = 'phone'
-            bot.send_message(cid, 'شماره تماس را وارد کن:')
-
-        elif step == 'phone':
-            user_data[cid]['phone'] = text
-            user_data[cid]['step'] = 'city'
-            bot.send_message(cid, 'شهر را وارد کن:')
-
-        elif step == 'city':
-            user_data[cid]['city'] = text
-            user_data[cid]['step'] = 'address'
-            bot.send_message(cid, 'آدرس را وارد کن:')
-
-        elif step == 'address':
-            user_data[cid]['address'] = text
-            filename = f'order_{cid}.pdf'
-            create_pdf(filename, user_data[cid])
-            with open(filename, 'rb') as f:
-                bot.send_document(cid, f)
-            os.remove(filename)
-            bot.send_message(cid, '✅ فاکتور ارسال شد. ممنون از خرید شما!')
-            user_data.pop(cid, None)
-
-    except Exception as e:
-        bot.send_message(cid, f'❌ خطا: {e}')
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(KeyboardButton("🛍 ورود به فروشگاه", web_app=WebAppInfo(url="https://artin-oqaq.onrender.com/webapp/index.html")))
+    bot.send_message(msg.chat.id, "به فروشگاه پوشاک زنانه هالستون خوش اومدی 💃\nروی دکمه زیر بزن تا محصولات رو ببینی:", reply_markup=markup)
 
 if __name__ == '__main__':
     bot.remove_webhook()
