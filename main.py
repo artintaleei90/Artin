@@ -1,8 +1,8 @@
-# main.py
 import os
 import telebot
 from flask import Flask, request
 import json
+from telebot import types
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
@@ -11,8 +11,9 @@ from bidi.algorithm import get_display
 import arabic_reshaper
 
 TOKEN = "7739258515:AAEUXIZ3ySZ9xp9W31l7qr__sZkbf6qcKnE"
-bot = telebot.TeleBot(TOKEN)
+WEBAPP_URL = "https://artin-oqaq.onrender.com"  # آدرس مینی‌اپت رو اینجا بذار
 
+bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
 
 pdfmetrics.registerFont(TTFont('Vazir', 'Vazirmatn-Regular.ttf'))
@@ -69,6 +70,13 @@ def webhook():
         return "OK"
     except Exception as e:
         return f"Error: {e}", 500
+
+@bot.message_handler(commands=['start'])
+def start(message):
+    markup = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
+    webapp_btn = types.KeyboardButton('🛍 مشاهده محصولات', web_app=types.WebAppInfo(WEBAPP_URL))
+    markup.add(webapp_btn)
+    bot.send_message(message.chat.id, "سلام! از دکمه زیر می‌تونی محصولات رو ببینی و سفارش بدی:", reply_markup=markup)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8080)
