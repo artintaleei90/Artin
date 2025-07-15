@@ -17,6 +17,8 @@ WEBHOOK_URL = 'https://artin-oqaq.onrender.com/webhook'
 
 app = Flask(__name__)
 bot = telebot.TeleBot(TOKEN)
+
+# ثبت فونت (مطمئن شو فایل Vazirmatn-Regular.ttf در کنار main.py هست)
 FONT_PATH = "Vazirmatn-Regular.ttf"
 pdfmetrics.registerFont(TTFont('Vazir', FONT_PATH))
 
@@ -70,8 +72,8 @@ def create_pdf(filename, data):
             reshape_text(code),
             reshape_text(name),
             reshape_text(str(count)),
-            reshape_text(str(price)),
-            reshape_text(str(sum_price))
+            reshape_text(f"{price:,}"),
+            reshape_text(f"{sum_price:,}")
         ])
 
     table = Table(table_data, colWidths=[3*cm, 7*cm, 2*cm, 3*cm, 3*cm])
@@ -90,7 +92,7 @@ def create_pdf(filename, data):
     table.drawOn(c, 2*cm, y - table_height)
     y = y - table_height - 1*cm
 
-    c.drawRightString(width - 2*cm, y, reshape_text(f"جمع کل سفارش: {total} تومان"))
+    c.drawRightString(width - 2*cm, y, reshape_text(f"جمع کل سفارش: {total:,} تومان"))
     c.showPage()
     c.save()
 
@@ -104,21 +106,28 @@ def send_webapp(path):
 
 @app.route('/webapp/order', methods=['POST'])
 def handle_webapp_order():
-    data = request.get_json()
-    print("Received data:", data)  # لاگ برای دیباگ
-    phone = data.get('phone') if data else None
-    if not data or not data.get('orders'):
-        return jsonify({'status': 'error', 'message': 'سبد خرید خالی است'}), 400
-
-    filename = f"order_{phone}.pdf"
-    create_pdf(filename, data)
-
     try:
+        data = request.get_json(force=True)
+        print("داده دریافتی:", data)  # لاگ برای دیباگ
+        if not data or not data.get('orders'):
+            return jsonify({'status': 'error', 'message': 'سبد خرید خالی است'}), 400
+
+        phone = data.get('phone', 'unknown')
+        filename = f"order_{phone}.pdf"
+        create_pdf(filename, data)
+
         with open(filename, 'rb') as f:
+            # به جای @Halston_shop میتونی آی‌دی چت شخصی یا گروه بگذاری
             bot.send_document(chat_id='@Halston_shop', document=f)
+
         return jsonify({'status': 'success'})
+
+    except Exception as e:
+        print(f"خطا در /webapp/order: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
     finally:
-        if os.path.exists(filename):
+        if 'filename' in locals() and os.path.exists(filename):
             os.remove(filename)
 
 @app.route('/webhook', methods=['POST'])
