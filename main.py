@@ -105,16 +105,16 @@ def send_webapp(path):
 @app.route('/webapp/order', methods=['POST'])
 def handle_webapp_order():
     data = request.get_json()
-    phone = data.get('phone')
-    if not data.get('orders'):
-        return jsonify({'status': 'error', 'message': 'سبد خرید خالی است'}), 400
+    tg_id = data.get('telegram_id')
+    if not data.get('orders') or not tg_id:
+        return jsonify({'status': 'error', 'message': 'اطلاعات ناقص است'}), 400
 
-    filename = f"order_{phone}.pdf"
+    filename = f"order_{tg_id}.pdf"
     create_pdf(filename, data)
 
     try:
         with open(filename, 'rb') as f:
-            bot.send_document(chat_id='@Halston_shop', document=f)
+            bot.send_document(chat_id=tg_id, document=f)
         return jsonify({'status': 'success'})
     finally:
         if os.path.exists(filename):
