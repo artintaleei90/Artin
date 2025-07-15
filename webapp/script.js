@@ -70,7 +70,7 @@ function renderCart() {
   });
 }
 
-document.getElementById('submit-order').onclick = () => {
+document.getElementById('submit-order').onclick = async () => {
   const name = document.getElementById('name').value;
   const phone = document.getElementById('phone').value;
   const city = document.getElementById('city').value;
@@ -94,11 +94,18 @@ document.getElementById('submit-order').onclick = () => {
     }))
   };
 
-  if (window.Telegram.WebApp) {
-    Telegram.WebApp.sendData(JSON.stringify(data));
-    Telegram.WebApp.close();
-  } else {
-    alert("WebApp پشتیبانی نمی‌شود.");
+  try {
+    await fetch('/webapp/order', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
+    });
+    alert("سفارش شما با موفقیت ثبت شد ✅");
+    document.getElementById('cart-modal').classList.add('hidden');
+  } catch (err) {
+    alert("خطایی در ارسال سفارش رخ داد.");
   }
 };
 
