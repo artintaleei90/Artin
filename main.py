@@ -1,5 +1,5 @@
-‏import os
-‏import telebot
+import os
+import telebot
 ‏from flask import Flask
 ‏from threading import Thread
 
