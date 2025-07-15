@@ -12,20 +12,28 @@ import arabic_reshaper
 from bidi.algorithm import get_display
 from telebot.types import WebAppInfo, KeyboardButton, ReplyKeyboardMarkup
 
+# تنظیمات
 TOKEN = '7739258515:AAEUXIZ3ySZ9xp9W31l7qr__sZkbf6qcKnE'
 WEBHOOK_URL = 'https://artin-oqaq.onrender.com/webhook'
+FONT_PATH = "Vazirmatn-Regular.ttf"
+CHANNEL = '@Halston_shop'  # یا chat_id کاربر
 
+# راه‌اندازی
 app = Flask(__name__)
 bot = telebot.TeleBot(TOKEN)
 
-# ثبت فونت (مطمئن شو فایل Vazirmatn-Regular.ttf در کنار main.py هست)
-FONT_PATH = "Vazirmatn-Regular.ttf"
-pdfmetrics.registerFont(TTFont('Vazir', FONT_PATH))
+# فونت فارسی
+try:
+    pdfmetrics.registerFont(TTFont('Vazir', FONT_PATH))
+except Exception as e:
+    print(f"❌ خطا در بارگذاری فونت: {e}")
 
+# تابع فارسی‌سازی متن
 def reshape_text(text):
     reshaped = arabic_reshaper.reshape(text)
     return get_display(reshaped)
 
+# ساخت فایل PDF سفارش
 def create_pdf(filename, data):
     c = canvas.Canvas(filename, pagesize=A4)
     width, height = A4
@@ -46,12 +54,6 @@ def create_pdf(filename, data):
 
     y -= 0.5*cm
     orders = data.get('orders', [])
-    if not orders:
-        c.drawString(2*cm, y, reshape_text("هیچ محصولی ثبت نشده است."))
-        c.showPage()
-        c.save()
-        return
-
     table_data = [[
         reshape_text("کد محصول"),
         reshape_text("نام محصول"),
@@ -59,90 +61,83 @@ def create_pdf(filename, data):
         reshape_text("قیمت واحد"),
         reshape_text("مبلغ کل")
     ]]
-
     total = 0
     for order in orders:
         code = order['code']
         name = order['name']
         count = order['count']
         price = order['price']
-        sum_price = count * price
-        total += sum_price
+        total_price = count * price
+        total += total_price
         table_data.append([
             reshape_text(code),
             reshape_text(name),
             reshape_text(str(count)),
-            reshape_text(f"{price:,}"),
-            reshape_text(f"{sum_price:,}")
+            reshape_text(str(price)),
+            reshape_text(str(total_price))
         ])
-
     table = Table(table_data, colWidths=[3*cm, 7*cm, 2*cm, 3*cm, 3*cm])
     style = TableStyle([
         ('BACKGROUND', (0,0), (-1,0), colors.lightgrey),
-        ('TEXTCOLOR', (0,0), (-1,0), colors.black),
-        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('GRID', (0,0), (-1,-1), 1, colors.black),
         ('FONTNAME', (0,0), (-1,-1), 'Vazir'),
         ('FONTSIZE', (0,0), (-1,-1), 10),
-        ('GRID', (0,0), (-1,-1), 1, colors.black),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER')
     ])
     table.setStyle(style)
-
     table.wrapOn(c, width, height)
-    table_height = table._height
-    table.drawOn(c, 2*cm, y - table_height)
-    y = y - table_height - 1*cm
-
+    table.drawOn(c, 2*cm, y - table._height)
+    y = y - table._height - 1*cm
     c.drawRightString(width - 2*cm, y, reshape_text(f"جمع کل سفارش: {total:,} تومان"))
     c.showPage()
     c.save()
 
+# نمایش مینی‌اپ
 @app.route('/')
 def home():
     return redirect('/webapp/index.html')
 
 @app.route('/webapp/<path:path>')
-def send_webapp(path):
+def webapp_static(path):
     return send_from_directory('webapp', path)
 
+# دریافت سفارش از WebApp
 @app.route('/webapp/order', methods=['POST'])
-def handle_webapp_order():
+def handle_order():
     try:
-        data = request.get_json(force=True)
-        print("داده دریافتی:", data)  # لاگ برای دیباگ
+        data = request.get_json()
         if not data or not data.get('orders'):
-            return jsonify({'status': 'error', 'message': 'سبد خرید خالی است'}), 400
-
-        phone = data.get('phone', 'unknown')
-        filename = f"order_{phone}.pdf"
+            print("❌ سفارش نامعتبر یا خالی.")
+            return jsonify({'status': 'error', 'message': 'سفارش خالی است'}), 400
+        
+        filename = f"order_{data.get('phone', 'no_phone')}.pdf"
         create_pdf(filename, data)
 
         with open(filename, 'rb') as f:
-            # به جای @Halston_shop میتونی آی‌دی چت شخصی یا گروه بگذاری
-            bot.send_document(chat_id='@Halston_shop', document=f)
+            bot.send_document(chat_id=CHANNEL, document=f, caption="📥 سفارش جدید ثبت شد!")
 
-        return jsonify({'status': 'success'})
+        os.remove(filename)
+        return jsonify({'status': 'success'}), 200
 
     except Exception as e:
-        print(f"خطا در /webapp/order: {e}")
+        print(f"❌ خطا در ثبت سفارش: {e}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
-    finally:
-        if 'filename' in locals() and os.path.exists(filename):
-            os.remove(filename)
-
+# وب‌هوک تلگرام
 @app.route('/webhook', methods=['POST'])
 def webhook():
-    json_str = request.get_data().decode('utf-8')
-    update = telebot.types.Update.de_json(json_str)
+    update = telebot.types.Update.de_json(request.stream.read().decode("utf-8"))
     bot.process_new_updates([update])
     return "OK", 200
 
+# /start => دکمه ورود به فروشگاه
 @bot.message_handler(commands=['start'])
-def start(msg):
+def handle_start(message):
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add(KeyboardButton("🛍 ورود به فروشگاه", web_app=WebAppInfo(url="https://artin-oqaq.onrender.com/webapp/index.html")))
-    bot.send_message(msg.chat.id, "به فروشگاه پوشاک زنانه هالستون خوش اومدی 💃\nروی دکمه زیر بزن تا محصولات رو ببینی:", reply_markup=markup)
+    bot.send_message(message.chat.id, "به فروشگاه پوشاک زنانه هالستون خوش اومدی 💃", reply_markup=markup)
 
+# اجرای سرور
 if __name__ == '__main__':
     bot.remove_webhook()
     bot.set_webhook(url=WEBHOOK_URL)
