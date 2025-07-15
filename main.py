@@ -296,4 +296,3 @@ def handle_message(msg):
 
 bot.remove_webhook()
 bot.infinity_polling()
-‏  
