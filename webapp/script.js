@@ -81,11 +81,20 @@ document.getElementById('submit-order').onclick = async () => {
     return;
   }
 
+  const initData = Telegram.WebApp.initDataUnsafe;
+  const chat_id = initData && initData.user ? initData.user.id : null;
+
+  if (!chat_id) {
+    alert("chat_id کاربر قابل دریافت نیست.");
+    return;
+  }
+
   const data = {
     name,
     phone,
     city,
     address,
+    chat_id,
     orders: cart.map(i => ({
       code: i.code,
       name: i.name,
@@ -97,15 +106,15 @@ document.getElementById('submit-order').onclick = async () => {
   try {
     await fetch('/webapp/order', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
+
     alert("سفارش شما با موفقیت ثبت شد ✅");
     document.getElementById('cart-modal').classList.add('hidden');
+    Telegram.WebApp.close(); // بستن وب‌اپ بعد از سفارش
   } catch (err) {
-    alert("خطایی در ارسال سفارش رخ داد.");
+    alert("خطا در ارسال سفارش ❌");
   }
 };
 
