@@ -81,23 +81,19 @@ document.getElementById('submit-order').onclick = async () => {
     return;
   }
 
-  // گرفتن chat_id از تلگرام وب اپ
-  let chat_id = null;
-  if (window.Telegram && Telegram.WebApp && Telegram.WebApp.initDataUnsafe) {
-    chat_id = Telegram.WebApp.initDataUnsafe.user.id;
-  }
-
-  if (!chat_id) {
-    alert("خطا در دریافت شناسه کاربر تلگرام. لطفا ربات را از طریق تلگرام باز کنید.");
+  if (!window.Telegram.WebApp || !window.Telegram.WebApp.initDataUnsafe) {
+    alert("این برنامه فقط داخل تلگرام کار می‌کند.");
     return;
   }
 
+  const chat_id = window.Telegram.WebApp.initDataUnsafe.user.id;
+
   const data = {
-    chat_id,
     name,
     phone,
     city,
     address,
+    chat_id,
     orders: cart.map(i => ({
       code: i.code,
       name: i.name,
@@ -112,14 +108,27 @@ document.getElementById('submit-order').onclick = async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
-    if (!res.ok) throw new Error("خطا در ارسال سفارش");
-    alert("سفارش شما با موفقیت ثبت شد ✅");
-    cart.length = 0;
-    updateCartCount();
-    document.getElementById('cart-modal').classList.add('hidden');
+    const result = await res.json();
+
+    if (result.status === 'success') {
+      alert("سفارش شما با موفقیت ثبت شد ✅");
+      document.getElementById('cart-modal').classList.add('hidden');
+      cart.length = 0;  // پاک کردن سبد خرید
+      updateCartCount();
+      clearForm();
+    } else {
+      alert("خطا در ثبت سفارش: " + result.message);
+    }
   } catch (err) {
-    alert("خطایی در ارسال سفارش رخ داد: " + err.message);
+    alert("خطایی در ارسال سفارش رخ داد.");
   }
 };
+
+function clearForm() {
+  document.getElementById('name').value = '';
+  document.getElementById('phone').value = '';
+  document.getElementById('city').value = '';
+  document.getElementById('address').value = '';
+}
 
 renderProducts();
